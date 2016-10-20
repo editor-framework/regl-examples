@@ -1,0 +1,8 @@
+{
+  "name": "regl-playground",
+  "version": "1.0.0",
+  "main": "app.js",
+  "dependencies": {
+    "regl": "1.x"
+  }
+}
