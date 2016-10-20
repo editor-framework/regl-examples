@@ -1,5 +1,6 @@
 'use strict';
 
+const Electron = require('electron');
 const REGL = require('regl');
 
 function _exec ( regl, path, reload ) {
@@ -61,6 +62,13 @@ document.addEventListener('readystatechange', () => {
   // on reload
   reloadEL.addEventListener('confirm', () => {
     _exec(regl, selectEL.value, true);
+  });
+
+  //
+  Electron.ipcRenderer.on('app:reload', (event, path) => {
+    if ( path === selectEL.value ) {
+      _exec(regl, path, true);
+    }
   });
 
   // add regl to global for debug
