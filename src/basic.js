@@ -24,10 +24,10 @@ module.exports = function (regl) {
     count: 3
   });
 
-  regl.frame( () => {
+  regl.frame(() => {
     // clear contents of the drawing buffer
     regl.clear({
-      color: [0, 0, 0, 255],
+      color: [0, 0, 0, 1],
       depth: 1
     });
 

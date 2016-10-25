@@ -1,36 +1,135 @@
 'use strict';
 
+const resl = require('resl');
+const mat4 = require('gl-mat4');
+
+const camera = require('../utils/camera');
+const grid = require('../utils/grid');
+
+const vertices = [
+  [-0.5, +0.5, +0.5], [+0.5, +0.5, +0.5], [+0.5, -0.5, +0.5], [-0.5, -0.5, +0.5], // positive z face.
+  [+0.5, +0.5, +0.5], [+0.5, +0.5, -0.5], [+0.5, -0.5, -0.5], [+0.5, -0.5, +0.5], // positive x face
+  [+0.5, +0.5, -0.5], [-0.5, +0.5, -0.5], [-0.5, -0.5, -0.5], [+0.5, -0.5, -0.5], // negative z face
+  [-0.5, +0.5, -0.5], [-0.5, +0.5, +0.5], [-0.5, -0.5, +0.5], [-0.5, -0.5, -0.5], // negative x face.
+  [-0.5, +0.5, -0.5], [+0.5, +0.5, -0.5], [+0.5, +0.5, +0.5], [-0.5, +0.5, +0.5], // top face
+  [-0.5, -0.5, -0.5], [+0.5, -0.5, -0.5], [+0.5, -0.5, +0.5], [-0.5, -0.5, +0.5]  // bottom face
+];
+
+const uvs = [
+  [0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0], // positive z face.
+  [0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0], // positive x face.
+  [0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0], // negative z face.
+  [0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0], // negative x face.
+  [0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0], // top face
+  [0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]  // bottom face
+];
+
+const indices = [
+  [2, 1, 0], [2, 0, 3],       // positive z face.
+  [6, 5, 4], [6, 4, 7],       // positive x face.
+  [10, 9, 8], [10, 8, 11],    // negative z face.
+  [14, 13, 12], [14, 12, 15], // negative x face.
+  [18, 17, 16], [18, 16, 19], // top face.
+  [20, 21, 22], [23, 20, 22]  // bottom face
+];
+
 module.exports = function (regl) {
-  const drawTriangle = regl({
+  const drawCube = regl({
     vert: `
-      attribute vec2 position;
+      precision mediump float;
+      uniform mat4 model, view, projection;
+
+      attribute vec3 position;
+      attribute vec2 uv;
+
+      varying vec2 v_uv;
+
       void main() {
-        gl_Position = vec4(position, 0, 1);
+        v_uv = uv;
+        gl_Position = projection * view * model * vec4(position, 1);
       }
     `,
 
     frag: `
-      void main() {
-        gl_FragColor = vec4(1, 1, 0, 1);
+      precision mediump float;
+      uniform sampler2D tex;
+
+      varying vec2 v_uv;
+
+      void main () {
+        gl_FragColor = texture2D( tex, v_uv );
       }
     `,
 
     attributes: {
-      position: [
-        [0, -1], [-1, 0], [1, 1]
-      ]
+      position: vertices,
+      uv: uvs,
     },
 
-    count: 3
+    elements: indices,
+
+    uniforms: {
+      model: mat4.identity([]),
+
+      // model: ({tick}) => {
+      //   const t = 0.05 * tick;
+      //   return mat4.rotate([], mat4.identity([]), Math.sin(t), [0, 1, 0]);
+      // },
+
+      // view: mat4.lookAt(
+      //   [],
+      //   [0, 2.5, 5],
+      //   [0, 0, 0],
+      //   [0, 1, 0]
+      // ),
+
+      // projection: ({viewportWidth, viewportHeight}) => {
+      //   return mat4.perspective(
+      //     [],
+      //     Math.PI / 4,
+      //     viewportWidth / viewportHeight,
+      //     0.01,
+      //     1000
+      //   );
+      // },
+
+      tex: regl.prop('texture')
+    }
   });
 
-  regl.frame( () => {
-    // clear contents of the drawing buffer
-    regl.clear({
-      color: [0, 0, 0, 255],
-      depth: 1
-    });
+  let setupCamera = camera(regl, {
+    center: [0, 0, 0],
+  });
+  let drawGrid = grid(regl, 100, 100, 100);
 
-    drawTriangle();
+  resl({
+    manifest: {
+      texture: {
+        type: 'image',
+        src: 'res/checker_uv_02.jpg',
+        parser: (data) => regl.texture({
+          data: data,
+          mag: 'linear',
+          min: 'mipmap',
+          mipmap: 'nice',
+        })
+      }
+    },
+
+    onDone: ({texture}) => {
+      regl.frame(() => {
+
+        // clear contents of the drawing buffer
+        regl.clear({
+          color: [0.3, 0.3, 0.3, 1],
+          depth: 1
+        });
+
+        setupCamera(() => {
+          drawCube({ texture });
+          drawGrid();
+        });
+      });
+    },
   });
 };

@@ -3,6 +3,12 @@
   "version": "1.0.0",
   "main": "app.js",
   "dependencies": {
-    "regl": "1.x"
+    "gl-mat4": "",
+    "gl-quad": "",
+    "gl-vec4": "",
+    "glsl-numerify": "",
+    "glsl-quad": "",
+    "regl": "1.x",
+    "resl": "1.x"
   }
 }
