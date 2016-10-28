@@ -56,11 +56,13 @@ document.addEventListener('readystatechange', () => {
   });
 
   function _exec ( path, reload ) {
+    console.clear();
+
     //
     let regl = window._regl;
     if ( regl ) {
       regl.destroy();
-      regl = null;
+      window._regl = regl = null;
     }
 
     //
@@ -75,7 +77,7 @@ document.addEventListener('readystatechange', () => {
 
     //
     path = Editor.url(`app://${path}`);
-      if (reload) {
+    if (reload) {
       delete require.cache[path];
     }
 
@@ -83,6 +85,10 @@ document.addEventListener('readystatechange', () => {
     if (fn) {
       fn(regl);
     }
+
+    // clear caches
+    Electron.webFrame.clearCache();
+    // console.log(Electron.webFrame.getResourceUsage());
   }
 
   function _resize ( canvasEL ) {

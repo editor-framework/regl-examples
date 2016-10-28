@@ -24,50 +24,76 @@ function createCamera (regl, props) {
   let minDistance = Math.log('minDistance' in props ? props.minDistance : 1);
   let maxDistance = Math.log('maxDistance' in props ? props.maxDistance : 100);
 
-  let prevX = 0;
-  let prevY = 0;
+  // let prevX = 0;
+  // let prevY = 0;
 
   let curTheta = cameraState.theta;
   let curPhi = cameraState.phi;
   let curDistance = cameraState.distance;
 
+  canvasEL.addEventListener('mousedown', event => {
+    if ( event.buttons & 1 ) {
+      Editor.UI.startDrag(
+        'default',
+        event,
+
+        // move
+        ( event, dx, dy ) => {
+          dx = dx * 0.002;
+          dy = dy * 0.002;
+          let w = Math.max(cameraState.distance, 2.0);
+
+          cameraState.theta += w * dx;
+          cameraState.phi += w * dy;
+
+          // DISABLE
+          // cameraState.phi = clamp(
+          //   cameraState.phi + w * dy,
+          //   -Math.PI / 2.0,
+          //   Math.PI / 2.0
+          // );
+        }
+      );
+    }
+  });
+
   canvasEL.addEventListener('mouseenter', event => {
     event.stopPropagation();
 
-    prevX = event.offsetX;
-    prevY = event.offsetY;
+    // prevX = event.offsetX;
+    // prevY = event.offsetY;
   });
 
-  canvasEL.addEventListener('mousemove', event => {
-    if ( event.buttons & 1 ) {
-      let mouseX = event.offsetX;
-      let mouseY = event.offsetY;
+  // canvasEL.addEventListener('mousemove', event => {
+  //   if ( event.buttons & 1 ) {
+  //     let mouseX = event.offsetX;
+  //     let mouseY = event.offsetY;
 
-      let dx = (mouseX - prevX) / canvasEL.width;
-      let dy = (mouseY - prevY) / canvasEL.height;
-      let w = Math.max(cameraState.distance, 2.0);
+  //     let dx = (mouseX - prevX) * 0.002;
+  //     let dy = (mouseY - prevY) * 0.002;
+  //     let w = Math.max(cameraState.distance, 2.0);
 
-      cameraState.theta += w * dx;
-      cameraState.phi += w * dy;
+  //     cameraState.theta += w * dx;
+  //     cameraState.phi += w * dy;
 
-      // DISABLE
-      // cameraState.phi = clamp(
-      //   cameraState.phi + w * dy,
-      //   -Math.PI / 2.0,
-      //   Math.PI / 2.0
-      // );
+  //     // DISABLE
+  //     // cameraState.phi = clamp(
+  //     //   cameraState.phi + w * dy,
+  //     //   -Math.PI / 2.0,
+  //     //   Math.PI / 2.0
+  //     // );
 
-      prevX = mouseX;
-      prevY = mouseY;
-    }
+  //     prevX = mouseX;
+  //     prevY = mouseY;
+  //   }
 
-    prevX = event.offsetX;
-    prevY = event.offsetY;
-  });
+  //   prevX = event.offsetX;
+  //   prevY = event.offsetY;
+  // });
 
   canvasEL.addEventListener('mousewheel', event => {
     cameraState.distance = clamp(
-      cameraState.distance + event.deltaY / canvasEL.height,
+      cameraState.distance + event.deltaY * 0.002,
       minDistance,
       maxDistance
     );
