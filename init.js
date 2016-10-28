@@ -8,21 +8,21 @@ document.addEventListener('readystatechange', () => {
     return;
   }
 
-  let canvasEL = document.getElementById('canvas');
+  let viewEL = document.getElementById('view');
   let selectEL = document.getElementById('select');
   let reloadEL = document.getElementById('reload');
   let profile = null;
 
   //
   window.requestAnimationFrame(() => {
-    _resize(canvasEL);
+    _resize();
   });
 
   // events
 
   // on window-resize
   window.addEventListener('resize', () => {
-    _resize(canvasEL);
+    _resize();
   });
 
   // on select-changed
@@ -56,24 +56,7 @@ document.addEventListener('readystatechange', () => {
   });
 
   function _exec ( path, reload ) {
-    console.clear();
-
-    //
-    let regl = window._regl;
-    if ( regl ) {
-      regl.destroy();
-      window._regl = regl = null;
-    }
-
-    //
-    regl = REGL({
-      canvas: canvasEL,
-      extensions: [
-        'OES_texture_float',
-        'OES_texture_float_linear'
-      ]
-    });
-    window._regl = regl;
+    _reset();
 
     //
     path = Editor.url(`app://${path}`);
@@ -83,7 +66,7 @@ document.addEventListener('readystatechange', () => {
 
     let fn = require(path);
     if (fn) {
-      fn(regl);
+      fn(window._regl);
     }
 
     // clear caches
@@ -91,9 +74,36 @@ document.addEventListener('readystatechange', () => {
     // console.log(Electron.webFrame.getResourceUsage());
   }
 
-  function _resize ( canvasEL ) {
-    let bcr = canvasEL.parentElement.getBoundingClientRect();
-    canvasEL.width = bcr.width;
-    canvasEL.height = bcr.height;
+  function _reset () {
+    console.clear();
+
+    //
+    if ( window._regl ) {
+      window._regl.destroy();
+      window._regl = null;
+      Editor.UI.clear(viewEL);
+    }
+
+    //
+    let regl = REGL({
+      container: viewEL,
+      extensions: [
+        'OES_texture_float',
+        'OES_texture_float_linear'
+      ]
+    });
+    regl._gl.canvas.tabIndex = -1;
+
+    //
+    window._regl = regl;
+  }
+
+  function _resize () {
+    let canvasEL = document.querySelector('canvas');
+    if ( canvasEL ) {
+      let bcr = canvasEL.parentElement.getBoundingClientRect();
+      canvasEL.width = bcr.width;
+      canvasEL.height = bcr.height;
+    }
   }
 });
