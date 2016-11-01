@@ -6,6 +6,8 @@ const mat4 = require('gl-mat4');
 const camera = require('../utils/camera');
 const grid = require('../utils/grid');
 
+const Input = require('../utils/input');
+
 const vertices = [
   [-0.5, +0.5, +0.5], [+0.5, +0.5, +0.5], [+0.5, -0.5, +0.5], [-0.5, -0.5, +0.5], // positive z face.
   [+0.5, +0.5, +0.5], [+0.5, +0.5, -0.5], [+0.5, -0.5, -0.5], [+0.5, -0.5, +0.5], // positive x face
@@ -34,6 +36,8 @@ const indices = [
 ];
 
 module.exports = function (regl) {
+  let input = new Input(regl);
+
   const drawCube = regl({
     vert: `
       precision mediump float;
@@ -76,28 +80,11 @@ module.exports = function (regl) {
       //   return mat4.rotate([], mat4.identity([]), Math.sin(t), [0, 1, 0]);
       // },
 
-      // view: mat4.lookAt(
-      //   [],
-      //   [0, 2.5, 5],
-      //   [0, 0, 0],
-      //   [0, 1, 0]
-      // ),
-
-      // projection: ({viewportWidth, viewportHeight}) => {
-      //   return mat4.perspective(
-      //     [],
-      //     Math.PI / 4,
-      //     viewportWidth / viewportHeight,
-      //     0.01,
-      //     1000
-      //   );
-      // },
-
       tex: regl.prop('texture')
     }
   });
 
-  let setupCamera = camera(regl, {
+  let updateCamera = camera(regl, {
     center: [0, 0, 0],
   });
   let drawGrid = grid(regl, 100, 100, 100);
@@ -125,10 +112,12 @@ module.exports = function (regl) {
           depth: 1
         });
 
-        setupCamera(() => {
+        updateCamera(input, () => {
           drawCube({ texture });
           drawGrid();
         });
+
+        input.reset();
       });
     },
   });

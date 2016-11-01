@@ -1,6 +1,7 @@
 'use strict';
 
 module.exports = function (regl) {
+
   const drawTriangle = regl({
     vert: `
       attribute vec2 position;
@@ -27,7 +28,7 @@ module.exports = function (regl) {
   regl.frame(() => {
     // clear contents of the drawing buffer
     regl.clear({
-      color: [0, 0, 0, 1],
+      color: [0.3, 0.3, 0.3, 1],
       depth: 1
     });
 

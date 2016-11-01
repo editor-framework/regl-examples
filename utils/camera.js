@@ -16,88 +16,15 @@ function createCamera (regl, props) {
     up: new Float32Array(props.up || [0, 1, 0])
   };
 
-  let canvasEL = regl._gl.canvas;
-
   let right = new Float32Array([1, 0, 0]);
   let front = new Float32Array([0, 0, 1]);
 
   let minDistance = Math.log('minDistance' in props ? props.minDistance : 1);
   let maxDistance = Math.log('maxDistance' in props ? props.maxDistance : 100);
 
-  // let prevX = 0;
-  // let prevY = 0;
-
   let curTheta = cameraState.theta;
   let curPhi = cameraState.phi;
   let curDistance = cameraState.distance;
-
-  canvasEL.addEventListener('mousedown', event => {
-    if ( event.buttons & 1 ) {
-      Editor.UI.startDrag(
-        'default',
-        event,
-
-        // move
-        ( event, dx, dy ) => {
-          dx = dx * 0.002;
-          dy = dy * 0.002;
-          let w = Math.max(cameraState.distance, 2.0);
-
-          cameraState.theta += w * dx;
-          cameraState.phi += w * dy;
-
-          // DISABLE
-          // cameraState.phi = clamp(
-          //   cameraState.phi + w * dy,
-          //   -Math.PI / 2.0,
-          //   Math.PI / 2.0
-          // );
-        }
-      );
-    }
-  });
-
-  canvasEL.addEventListener('mouseenter', event => {
-    event.stopPropagation();
-
-    // prevX = event.offsetX;
-    // prevY = event.offsetY;
-  });
-
-  // canvasEL.addEventListener('mousemove', event => {
-  //   if ( event.buttons & 1 ) {
-  //     let mouseX = event.offsetX;
-  //     let mouseY = event.offsetY;
-
-  //     let dx = (mouseX - prevX) * 0.002;
-  //     let dy = (mouseY - prevY) * 0.002;
-  //     let w = Math.max(cameraState.distance, 2.0);
-
-  //     cameraState.theta += w * dx;
-  //     cameraState.phi += w * dy;
-
-  //     // DISABLE
-  //     // cameraState.phi = clamp(
-  //     //   cameraState.phi + w * dy,
-  //     //   -Math.PI / 2.0,
-  //     //   Math.PI / 2.0
-  //     // );
-
-  //     prevX = mouseX;
-  //     prevY = mouseY;
-  //   }
-
-  //   prevX = event.offsetX;
-  //   prevY = event.offsetY;
-  // });
-
-  canvasEL.addEventListener('mousewheel', event => {
-    cameraState.distance = clamp(
-      cameraState.distance + event.deltaY * 0.002,
-      minDistance,
-      maxDistance
-    );
-  });
 
   function lerp (from, to, ratio) {
     return from + (to - from) * ratio;
@@ -105,6 +32,23 @@ function createCamera (regl, props) {
 
   function clamp (x, lo, hi) {
     return Math.min(Math.max(x, lo), hi);
+  }
+
+  function _handleInput (input) {
+    if ( input.keypress('mouse-left') ) {
+      let dx = input.mouseDeltaX * 0.002;
+      let dy = input.mouseDeltaY * 0.002;
+      let w = Math.max(cameraState.distance, 2.0);
+
+      cameraState.theta += w * dx;
+      cameraState.phi += w * dy;
+    }
+
+    cameraState.distance = clamp(
+      cameraState.distance + input.mouseScrollY * 0.002,
+      minDistance,
+      maxDistance
+    );
   }
 
   function _tick (dt) {
@@ -167,7 +111,7 @@ function createCamera (regl, props) {
   let last = 0;
   let time = 0;
 
-  function setupCamera(block) {
+  function updateCamera(input, block) {
     // get delta time
     let now = regl.now();
     let dt = 0;
@@ -178,11 +122,12 @@ function createCamera (regl, props) {
     last = now;
 
     // update camera
+    _handleInput(input);
     _tick(dt);
 
     //
     injectContext(block);
   }
 
-  return setupCamera;
+  return updateCamera;
 }
