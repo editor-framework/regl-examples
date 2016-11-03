@@ -48,13 +48,13 @@ module.exports = function (regl, props) {
 
       panX = dx;
       panY = -dy;
-    } else if ( input.keypress('mouse-right') ) {
+    } else if ( input.keypress('mouse-left') ) {
       let dx = input.mouseDeltaX * dt * 0.2;
       let dy = input.mouseDeltaY * dt * 10.0;
 
       cameraState.theta -= dx;
       panZ = -dy;
-    } else if ( input.keypress('mouse-left') ) {
+    } else if ( input.keypress('mouse-right') ) {
       let dx = input.mouseDeltaX * dt * 0.2;
       let dy = input.mouseDeltaY * dt * 0.2;
 

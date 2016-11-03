@@ -15,6 +15,8 @@ class Input {
     this.mouseY = 0;
     this.mouseScrollX = 0;
     this.mouseScrollY = 0;
+    this.mouseDeltaX = 0;
+    this.mouseDeltaY = 0;
 
     this._regl = regl;
     this._grabbingMouse = false;
@@ -44,7 +46,8 @@ class Input {
     canvasEL.addEventListener('mousedown', event => {
       event.stopPropagation();
 
-      Editor.UI.addDragGhost('crosshair');
+      // Editor.UI.addDragGhost('crosshair');
+      document.body.requestPointerLock();
 
       let bcr = canvasEL.getBoundingClientRect();
 
@@ -59,6 +62,9 @@ class Input {
 
         let bcr = canvasEL.getBoundingClientRect();
 
+        this.mouseDeltaX = event.movementX;
+        this.mouseDeltaY = event.movementY;
+
         this.mouseX = event.clientX - bcr.left;
         this.mouseY = event.clientY - bcr.top;
       };
@@ -67,6 +73,9 @@ class Input {
         event.stopPropagation();
 
         let bcr = canvasEL.getBoundingClientRect();
+
+        this.mouseDeltaX = event.movementX;
+        this.mouseDeltaY = event.movementY;
 
         this.mouseX = event.clientX - bcr.left;
         this.mouseY = event.clientY - bcr.top;
@@ -99,6 +108,9 @@ class Input {
 
       let bcr = canvasEL.getBoundingClientRect();
 
+      this.mouseDeltaX = event.movementX;
+      this.mouseDeltaY = event.movementY;
+
       this.mouseX = event.clientX - bcr.left;
       this.mouseY = event.clientY - bcr.top;
     });
@@ -115,6 +127,9 @@ class Input {
 
       let bcr = canvasEL.getBoundingClientRect();
 
+      this.mouseDeltaX = 0.0;
+      this.mouseDeltaY = 0.0;
+
       this._prevMouseX = this.mouseX = event.clientX - bcr.left;
       this._prevMouseY = this.mouseY = event.clientY - bcr.top;
     });
@@ -124,17 +139,12 @@ class Input {
 
       let bcr = canvasEL.getBoundingClientRect();
 
+      this.mouseDeltaX = event.movementX;
+      this.mouseDeltaY = event.movementX;
+
       this._prevMouseX = this.mouseX = event.clientX - bcr.left;
       this._prevMouseY = this.mouseY = event.clientY - bcr.top;
     });
-  }
-
-  get mouseDeltaX () {
-    return this.mouseX - this._prevMouseX;
-  }
-
-  get mouseDeltaY () {
-    return this.mouseY - this._prevMouseY;
   }
 
   keydown (name) {
@@ -157,6 +167,9 @@ class Input {
     this.mouseScrollX = 0;
     this.mouseScrollY = 0;
 
+    this.mouseDeltaX = 0;
+    this.mouseDeltaY = 0;
+
     // update key-states
     for ( let name in this._keyStates ) {
       let state = this._keyStates[name];
@@ -173,7 +186,8 @@ class Input {
       this.keypress('mouse-middle') === false &&
       this.keypress('mouse-right') === false
     ) {
-      Editor.UI.removeDragGhost();
+      // Editor.UI.removeDragGhost();
+      document.exitPointerLock();
 
       document.removeEventListener('mousemove', this._mousemoveHandle);
       document.removeEventListener('mouseup', this._mouseupHandle);
