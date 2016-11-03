@@ -3,10 +3,10 @@
 const resl = require('resl');
 const mat4 = require('gl-mat4');
 
-const camera = require('../utils/camera');
-const grid = require('../utils/grid');
-
 const Input = require('../utils/input');
+const camera = require('../utils/camera/free-camera');
+// const camera = require('../utils/camera/orbit-camera');
+const grid = require('../utils/grid/grid');
 
 const vertices = [
   [-0.5, +0.5, +0.5], [+0.5, +0.5, +0.5], [+0.5, -0.5, +0.5], [-0.5, -0.5, +0.5], // positive z face.
@@ -85,7 +85,15 @@ module.exports = function (regl) {
   });
 
   let updateCamera = camera(regl, {
-    center: [0, 0, 0],
+    // orbit-camera
+    // center: [0, 0, 0],
+    // phi: Math.PI / 6,
+    // theta: Math.PI / 4,
+
+    // free-camera
+    eye: [10, 10, 10, 1],
+    phi: -Math.PI / 6,
+    theta: Math.PI / 4,
   });
   let drawGrid = grid(regl, 100, 100, 100);
 

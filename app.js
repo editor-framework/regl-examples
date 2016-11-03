@@ -13,7 +13,7 @@ Editor.App.extend({
     });
 
     Editor.Profile.setDefault(`profile://local/settings.json`, {
-      select: 'src/basic.js'
+      select: 'examples/basic.js'
     });
 
     cb ();
@@ -31,7 +31,7 @@ Editor.App.extend({
       resizable: true,
     });
 
-    watcher = Chokidar.watch(Editor.url('app://src'), {
+    watcher = Chokidar.watch(Editor.url('app://examples'), {
       ignored: [
         /[\/\\]bin/,
         /[\/\\]node_modules/,
