@@ -19,13 +19,55 @@ class Input {
     this.mouseDeltaY = 0;
 
     this._regl = regl;
-    this._grabbingMouse = false;
+    this._pointerLocked = false;
     this._lastTime = 0;
     this._prevMouseX = 0;
     this._prevMouseY = 0;
     this._keyStates = {}; // 0: none, 1: down, 2: press, 3: up
 
-    let canvasEL = regl._gl.canvas;
+    this._initEvents();
+  }
+
+  _initEvents () {
+    this._mousemoveHandle = event => {
+      event.stopPropagation();
+
+      let canvasEL = this._regl._gl.canvas;
+      let bcr = canvasEL.getBoundingClientRect();
+
+      this.mouseDeltaX = event.movementX;
+      this.mouseDeltaY = event.movementY;
+
+      if ( this._pointerLocked ) {
+        this.mouseX += event.movementX;
+        this.mouseY += event.movementY;
+      } else {
+        this.mouseX = event.clientX - bcr.left;
+        this.mouseY = event.clientY - bcr.top;
+      }
+    };
+
+    this._mousewheelHandle = event => {
+      event.stopPropagation();
+
+      this.mouseScrollX = event.deltaX;
+      this.mouseScrollY = event.deltaY;
+    };
+
+    this._mouseupHandle = event => {
+      event.stopPropagation();
+
+      this._keyStates[_mouseKeyNames[event.button]] = KEY_UP;
+    };
+
+    this._mousedownHandle = event => {
+      event.stopPropagation();
+
+      this._keyStates[_mouseKeyNames[event.button]] = KEY_DOWN;
+    };
+
+    // reigster canvas events
+    let canvasEL = this._regl._gl.canvas;
 
     // handle keyboard
     canvasEL.addEventListener('keydown', event => {
@@ -55,72 +97,18 @@ class Input {
       this.mouseY = this._prevMouseY = event.clientY - bcr.top;
 
       this._keyStates[_mouseKeyNames[event.button]] = KEY_DOWN;
-      this._grabbingMouse = true;
-
-      this._mousemoveHandle = event => {
-        event.stopPropagation();
-
-        let bcr = canvasEL.getBoundingClientRect();
-
-        this.mouseDeltaX = event.movementX;
-        this.mouseDeltaY = event.movementY;
-
-        this.mouseX = event.clientX - bcr.left;
-        this.mouseY = event.clientY - bcr.top;
-      };
-
-      this._mouseupHandle = event => {
-        event.stopPropagation();
-
-        let bcr = canvasEL.getBoundingClientRect();
-
-        this.mouseDeltaX = event.movementX;
-        this.mouseDeltaY = event.movementY;
-
-        this.mouseX = event.clientX - bcr.left;
-        this.mouseY = event.clientY - bcr.top;
-
-        this._keyStates[_mouseKeyNames[event.button]] = KEY_UP;
-      };
-
-      this._mousewheelHandle = event => {
-        event.stopPropagation();
-
-        this.mouseScrollX = event.deltaX;
-        this.mouseScrollY = event.deltaY;
-      };
-
-      // NOTE: this is possible, for multiple buttons pressed
-      this._mousedownHandle = event => {
-        event.stopPropagation();
-
-        this._keyStates[_mouseKeyNames[event.button]] = KEY_DOWN;
-      };
+      this._pointerLocked = true;
 
       document.addEventListener('mousemove', this._mousemoveHandle);
       document.addEventListener('mouseup', this._mouseupHandle);
       document.addEventListener('mousewheel', this._mousewheelHandle);
+
+      // NOTE: this is possible when multiple button press down
       document.addEventListener('mousedown', this._mousedownHandle);
     });
 
-    canvasEL.addEventListener('mousemove', event => {
-      event.stopPropagation();
-
-      let bcr = canvasEL.getBoundingClientRect();
-
-      this.mouseDeltaX = event.movementX;
-      this.mouseDeltaY = event.movementY;
-
-      this.mouseX = event.clientX - bcr.left;
-      this.mouseY = event.clientY - bcr.top;
-    });
-
-    canvasEL.addEventListener('mousewheel', event => {
-      event.stopPropagation();
-
-      this.mouseScrollX = event.deltaX;
-      this.mouseScrollY = event.deltaY;
-    });
+    canvasEL.addEventListener('mousemove', this._mousemoveHandle);
+    canvasEL.addEventListener('mousewheel', this._mousewheelHandle);
 
     canvasEL.addEventListener('mouseenter', event => {
       event.stopPropagation();
@@ -194,7 +182,7 @@ class Input {
       document.removeEventListener('mousewheel', this._mousewheelHandle);
       document.removeEventListener('mousedown', this._mousedownHandle);
 
-      this._grabbingMouse = false;
+      this._pointerLocked = false;
     }
   }
 }
