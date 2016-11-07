@@ -5,40 +5,18 @@ const mat4 = require('gl-mat4');
 
 const Input = require('../utils/input');
 const camera = require('../utils/camera/free-camera');
-// const camera = require('../utils/camera/orbit-camera');
 const grid = require('../utils/grid/grid');
-
-const vertices = [
-  [-0.5, +0.5, +0.5], [+0.5, +0.5, +0.5], [+0.5, -0.5, +0.5], [-0.5, -0.5, +0.5], // positive z face.
-  [+0.5, +0.5, +0.5], [+0.5, +0.5, -0.5], [+0.5, -0.5, -0.5], [+0.5, -0.5, +0.5], // positive x face
-  [+0.5, +0.5, -0.5], [-0.5, +0.5, -0.5], [-0.5, -0.5, -0.5], [+0.5, -0.5, -0.5], // negative z face
-  [-0.5, +0.5, -0.5], [-0.5, +0.5, +0.5], [-0.5, -0.5, +0.5], [-0.5, -0.5, -0.5], // negative x face.
-  [-0.5, +0.5, -0.5], [+0.5, +0.5, -0.5], [+0.5, +0.5, +0.5], [-0.5, +0.5, +0.5], // top face
-  [-0.5, -0.5, -0.5], [+0.5, -0.5, -0.5], [+0.5, -0.5, +0.5], [-0.5, -0.5, +0.5]  // bottom face
-];
-
-const uvs = [
-  [0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0], // positive z face.
-  [0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0], // positive x face.
-  [0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0], // negative z face.
-  [0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0], // negative x face.
-  [0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0], // top face
-  [0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]  // bottom face
-];
-
-const indices = [
-  [2, 1, 0], [2, 0, 3],       // positive z face.
-  [6, 5, 4], [6, 4, 7],       // positive x face.
-  [10, 9, 8], [10, 8, 11],    // negative z face.
-  [14, 13, 12], [14, 12, 15], // negative x face.
-  [18, 17, 16], [18, 16, 19], // top face.
-  [20, 21, 22], [23, 20, 22]  // bottom face
-];
+const box = require('../utils/geometry/box');
 
 module.exports = function (regl) {
   let input = new Input(regl);
+  let mesh = box(5, 5, 5, {
+    widthSegments: 2,
+    heightSegments: 2,
+    lengthSegments: 2,
+  });
 
-  const drawCube = regl({
+  const drawBox = regl({
     vert: `
       precision mediump float;
       uniform mat4 model, view, projection;
@@ -66,11 +44,11 @@ module.exports = function (regl) {
     `,
 
     attributes: {
-      position: vertices,
-      uv: uvs,
+      position: regl.prop('mesh.positions'),
+      uv: regl.prop('mesh.uvs'),
     },
 
-    elements: indices,
+    elements: regl.prop('mesh.indices'),
 
     uniforms: {
       model: mat4.identity([]),
@@ -101,7 +79,7 @@ module.exports = function (regl) {
     manifest: {
       texture: {
         type: 'image',
-        src: 'res/checker_uv_02.jpg',
+        src: 'assets-3d/textures/uv/uv_checker_bcm_02.jpg',
         parser: (data) => regl.texture({
           data: data,
           mag: 'linear',
@@ -121,7 +99,7 @@ module.exports = function (regl) {
         });
 
         updateCamera(input, () => {
-          drawCube({ texture });
+          drawBox({ texture, mesh });
           drawGrid();
         });
 

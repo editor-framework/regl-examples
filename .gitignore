@@ -23,13 +23,8 @@ profile
 # log files
 *.log
 
-# project files
+# modules
 node_modules/
 bower_components/
-app-examples/
-package-examples/
-regl-playground/
-demo/
+assets-3d/
 
-# test files
-.settings/

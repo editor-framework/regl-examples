@@ -37,7 +37,7 @@ module.exports = function (regl) {
     manifest: {
       texture: {
         type: 'image',
-        src: 'res/numerify-4x4.png',
+        src: 'assets-3d/textures/misc/numerify-4x4.png',
         parser: (data) => regl.texture({
           data: data,
           mag: 'nearest',
