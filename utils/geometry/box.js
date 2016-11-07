@@ -114,8 +114,8 @@ module.exports = function (width, height, length, opts) {
 
   return {
     positions: positions,
-    indices: indices,
     normals: normals,
     uvs: uvs,
+    indices: indices,
   };
 };

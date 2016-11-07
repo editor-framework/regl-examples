@@ -6,8 +6,10 @@ const mat4 = require('gl-mat4');
 const Input = require('../utils/input');
 const camera = require('../utils/camera/free-camera');
 const grid = require('../utils/grid/grid');
+
 const box = require('../utils/geometry/box');
 const quad = require('../utils/geometry/quad');
+const torus = require('../utils/geometry/torus');
 
 let vshader = `
   precision mediump float;
@@ -44,6 +46,7 @@ module.exports = function (regl) {
     lengthSegments: 1
   });
   let meshQuad = quad();
+  let meshTorus = torus();
 
   const identity = mat4.identity([]);
   const drawMesh = regl({
@@ -116,6 +119,13 @@ module.exports = function (regl) {
             texture,
             mesh: meshBox,
             model: mat4.translate([], identity, [2, 0, 0] )
+          });
+
+          // torus
+          drawMesh({
+            texture,
+            mesh: meshTorus,
+            model: mat4.translate([], identity, [4, 0, 0] )
           });
 
           // grids
