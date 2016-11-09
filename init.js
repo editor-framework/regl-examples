@@ -89,7 +89,8 @@ document.addEventListener('readystatechange', () => {
       container: viewEL,
       extensions: [
         'OES_texture_float',
-        'OES_texture_float_linear'
+        'OES_texture_float_linear',
+        'OES_standard_derivatives'
       ]
     });
     regl._gl.canvas.tabIndex = -1;

@@ -1,13 +1,13 @@
 'use strict';
 
-module.exports = function (opts) {
+module.exports = function (radius, tube, opts) {
   opts = opts || {};
 
-  let radius = opts.radius || 0.5;
-  let tube = opts.tube || 0.2;
+  radius = radius || 0.5;
+  tube = tube || 0.2;
   let radialSegments = opts.radialSegments || 30;
   let tubularSegments = opts.tubularSegments || 20;
-  let arc = opts.arc || Math.PI * 2;
+  let arc = opts.arc || 2.0 * Math.PI;
 
   let positions = [];
   let normals = [];
@@ -23,18 +23,18 @@ module.exports = function (opts) {
       let v1 = v * Math.PI * 2;
 
 			// vertex
-			let x = ( radius + tube * Math.cos( v1 ) ) * Math.cos( u1 );
-			let y = ( radius + tube * Math.cos( v1 ) ) * Math.sin( u1 );
-			let z = tube * Math.sin( v1 );
+			let x = (radius + tube * Math.cos(v1)) * Math.sin(u1);
+			let y = tube * Math.sin(v1);
+			let z = (radius + tube * Math.cos(v1)) * Math.cos(u1);
 
 			// this vector is used to calculate the normal
-      let nx = Math.cos(v1) * Math.cos(u1);
+      let nx = Math.cos(u1) * Math.sin(v1);
       let ny = Math.sin(u1);
-      let nz = Math.sin(v1) * Math.cos(u1);
+      let nz = Math.cos(u1) * Math.cos(v1);
 
       positions.push(x, y, z);
       normals.push(nx, ny, nz);
-      uvs.push(u, v);
+      uvs.push(u, 1.0-v);
 
       if ((i < tubularSegments) && (j < radialSegments)) {
         let seg1 = tubularSegments + 1;
@@ -53,6 +53,6 @@ module.exports = function (opts) {
     positions: positions,
     normals: normals,
     uvs: uvs,
-    indices: indices
+    indices: indices,
   };
 };

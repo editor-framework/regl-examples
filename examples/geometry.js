@@ -17,6 +17,7 @@ let vshader = `
 
   attribute vec3 position;
   attribute vec2 uv;
+  attribute vec3 barycentric;
 
   varying vec2 v_uv;
 
@@ -27,14 +28,20 @@ let vshader = `
 `;
 
 let fshader = `
+  #extension GL_OES_standard_derivatives : enable
+
   precision mediump float;
   uniform sampler2D tex;
 
   varying vec2 v_uv;
 
   void main () {
-    // gl_FragColor = vec4(v_uv.x, v_uv.y, 0, 1);
+    // gl_FragColor = vec4( v_uv.x, v_uv.y, 0, 1 );
     gl_FragColor = texture2D( tex, v_uv );
+
+    if (!gl_FrontFacing) {
+      gl_FragColor *= 0.05;
+    }
   }
 `;
 
@@ -52,10 +59,10 @@ module.exports = function (regl) {
   const drawMesh = regl({
     frontFace: 'cw',
 
-    cull: {
-      enable: true,
-      face: 'back'
-    },
+    // cull: {
+    //   enable: true,
+    //   face: 'back'
+    // },
 
     vert: vshader,
     frag: fshader,
@@ -70,7 +77,12 @@ module.exports = function (regl) {
     uniforms: {
       model: regl.prop('model'),
       tex: regl.prop('texture')
-    }
+    },
+
+    // count: function ( {time}, props ) {
+    //   let total = props.mesh.indices.length;
+    //   return Math.ceil(time % 10.0 / 10.0 * total);
+    // }
   });
 
   let updateCamera = camera(regl, {
