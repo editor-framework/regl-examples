@@ -5,6 +5,7 @@
   "dependencies": {
     "gl-mat4": "",
     "gl-quad": "",
+    "gl-vec3": "",
     "gl-vec4": "",
     "glsl-numerify": "",
     "glsl-quad": "",

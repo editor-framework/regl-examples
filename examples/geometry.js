@@ -10,6 +10,7 @@ const grid = require('../utils/grid/grid');
 const box = require('../utils/geometry/box');
 const quad = require('../utils/geometry/quad');
 const torus = require('../utils/geometry/torus');
+const cylinder = require('../utils/geometry/cylinder');
 
 let vshader = `
   precision mediump float;
@@ -54,6 +55,10 @@ module.exports = function (regl) {
   });
   let meshQuad = quad();
   let meshTorus = torus();
+  let meshCylinder = cylinder(0.5, 0.5, 1.0, {
+    radialSegments: 64,
+    heightSegments: 4,
+  });
 
   const identity = mat4.identity([]);
   const drawMesh = regl({
@@ -79,10 +84,10 @@ module.exports = function (regl) {
       tex: regl.prop('texture')
     },
 
-    // count: function ( {time}, props ) {
-    //   let total = props.mesh.indices.length;
-    //   return Math.ceil(time % 10.0 / 10.0 * total);
-    // }
+    count: function ( {time}, props ) {
+      let total = props.mesh.indices.length;
+      return Math.ceil(time % 10.0 / 10.0 * total);
+    }
   });
 
   let updateCamera = camera(regl, {
@@ -138,6 +143,13 @@ module.exports = function (regl) {
             texture,
             mesh: meshTorus,
             model: mat4.translate([], identity, [4, 0, 0] )
+          });
+
+          // cylinder
+          drawMesh({
+            texture,
+            mesh: meshCylinder,
+            model: mat4.translate([], identity, [6, 0, 0] )
           });
 
           // grids
