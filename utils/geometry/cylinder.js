@@ -49,12 +49,12 @@ module.exports = function ( radiusTop, radiusBottom, height, opts ) {
 	generateTorso();
 
   if ( capped ) {
-    if ( radiusTop > 0 ) {
-      generateCap( true );
-    }
-
     if ( radiusBottom > 0 ) {
       generateCap( false );
+    }
+
+    if ( radiusTop > 0 ) {
+      generateCap( true );
     }
   }
 

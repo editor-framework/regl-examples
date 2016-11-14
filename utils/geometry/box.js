@@ -106,11 +106,11 @@ module.exports = function (width, height, length, opts) {
   }
 
   _buildPlane(0, ws, hs); // FRONT
-  _buildPlane(1, ws, hs); // BACK
-  _buildPlane(2, ws, ls); // TOP
-  _buildPlane(3, ws, ls); // BOTTOM
   _buildPlane(4, ls, hs); // RIGHT
+  _buildPlane(1, ws, hs); // BACK
   _buildPlane(5, ls, hs); // LEFT
+  _buildPlane(3, ws, ls); // BOTTOM
+  _buildPlane(2, ws, ls); // TOP
 
   return {
     positions: positions,

@@ -48,13 +48,16 @@ let fshader = `
 
 module.exports = function (regl) {
   let input = new Input(regl);
-  let meshBox = box(1, 1, 1, {
-    widthSegments: 1,
-    heightSegments: 1,
-    lengthSegments: 1
-  });
   let meshQuad = quad();
+
+  let meshBox = box(1, 1, 1, {
+    widthSegments: 4,
+    heightSegments: 4,
+    lengthSegments: 4
+  });
+
   let meshTorus = torus();
+
   let meshCylinder = cylinder(0.5, 0.5, 1.0, {
     radialSegments: 64,
     heightSegments: 4,
