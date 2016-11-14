@@ -74,7 +74,7 @@ module.exports = function ( radiusTop, radiusBottom, height, opts ) {
     let normal = [];
 
 		// this will be used to calculate the normal
-		let slope = (radiusBottom - radiusTop) / height;
+		let slope = (radiusTop - radiusBottom) / height;
 
 		// generate positions, normals and uvs
 		for ( let y = 0; y <= heightSegments; y ++ ) {
@@ -82,7 +82,7 @@ module.exports = function ( radiusTop, radiusBottom, height, opts ) {
 			let v = y / heightSegments;
 
 			// calculate the radius of the current row
-			let radius = v * ( radiusBottom - radiusTop ) + radiusTop;
+			let radius = v * ( radiusTop - radiusBottom ) + radiusBottom;
 
 			for ( let x = 0; x <= radialSegments; ++x ) {
 				let u = x / radialSegments;

@@ -7,10 +7,13 @@ const Input = require('../utils/input');
 const camera = require('../utils/camera/free-camera');
 const grid = require('../utils/grid/grid');
 
-const box = require('../utils/geometry/box');
 const quad = require('../utils/geometry/quad');
+const plane = require('../utils/geometry/plane');
+const box = require('../utils/geometry/box');
+const sphere = require('../utils/geometry/sphere');
 const torus = require('../utils/geometry/torus');
 const cylinder = require('../utils/geometry/cylinder');
+const cone = require('../utils/geometry/cone');
 
 let vshader = `
   precision mediump float;
@@ -50,15 +53,29 @@ module.exports = function (regl) {
   let input = new Input(regl);
   let meshQuad = quad();
 
+  let meshPlane = plane( 1, 1, {
+    widthSegments: 16,
+    lengthSegments: 16
+  });
+
   let meshBox = box(1, 1, 1, {
     widthSegments: 4,
     heightSegments: 4,
     lengthSegments: 4
   });
 
+  let meshSphere = sphere(0.5, {
+    segments: 64,
+  });
+
   let meshTorus = torus();
 
   let meshCylinder = cylinder(0.5, 0.5, 1.0, {
+    radialSegments: 64,
+    heightSegments: 4,
+  });
+
+  let meshCone = cone(0.5, 1.0, {
     radialSegments: 64,
     heightSegments: 4,
   });
@@ -87,10 +104,10 @@ module.exports = function (regl) {
       tex: regl.prop('texture')
     },
 
-    count: function ( {time}, props ) {
-      let total = props.mesh.indices.length;
-      return Math.ceil(time % 10.0 / 10.0 * total);
-    }
+    // count ( {time}, props ) {
+    //   let total = props.mesh.indices.length;
+    //   return Math.ceil(time % 10.0 / 10.0 * total);
+    // }
   });
 
   let updateCamera = camera(regl, {
@@ -134,25 +151,46 @@ module.exports = function (regl) {
             model: mat4.translate([], identity, [0, 0, 0] )
           });
 
+          // plane
+          drawMesh({
+            texture,
+            mesh: meshPlane,
+            model: mat4.translate([], identity, [2, 0, 0] )
+          });
+
           // box
           drawMesh({
             texture,
             mesh: meshBox,
-            model: mat4.translate([], identity, [2, 0, 0] )
+            model: mat4.translate([], identity, [4, 0, 0] )
+          });
+
+          // sphere
+          drawMesh({
+            texture,
+            mesh: meshSphere,
+            model: mat4.translate([], identity, [6, 0, 0] )
           });
 
           // torus
           drawMesh({
             texture,
             mesh: meshTorus,
-            model: mat4.translate([], identity, [4, 0, 0] )
+            model: mat4.translate([], identity, [8, 0, 0] )
           });
 
           // cylinder
           drawMesh({
             texture,
             mesh: meshCylinder,
-            model: mat4.translate([], identity, [6, 0, 0] )
+            model: mat4.translate([], identity, [10, 0, 0] )
+          });
+
+          // cone
+          drawMesh({
+            texture,
+            mesh: meshCone,
+            model: mat4.translate([], identity, [12, 0, 0] )
           });
 
           // grids
