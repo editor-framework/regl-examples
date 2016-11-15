@@ -3,10 +3,7 @@
   "version": "1.0.0",
   "main": "app.js",
   "dependencies": {
-    "gl-mat4": "",
-    "gl-quad": "",
-    "gl-vec3": "",
-    "gl-vec4": "",
+    "gl-matrix": "",
     "glsl-numerify": "",
     "glsl-quad": "",
     "regl": "1.x",

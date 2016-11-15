@@ -1,7 +1,7 @@
 'use strict';
 
 const resl = require('resl');
-const mat4 = require('gl-mat4');
+const {mat4} = require('gl-matrix');
 
 const Input = require('../utils/input');
 const camera = require('../utils/camera/free-camera');

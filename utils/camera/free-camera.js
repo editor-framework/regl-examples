@@ -1,7 +1,6 @@
 'use strict';
 
-const vec4 = require('gl-vec4');
-const mat4 = require('gl-mat4');
+const {vec4, mat4} = require('gl-matrix');
 
 module.exports = function (regl, props) {
   let cameraState = {
@@ -148,7 +147,7 @@ module.exports = function (regl, props) {
           Math.PI / 4.0,
           viewportWidth / viewportHeight,
           0.01,
-          1000.0
+          10000.0
         );
       }
     },

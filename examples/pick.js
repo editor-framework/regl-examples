@@ -1,19 +1,36 @@
 'use strict';
 
 const resl = require('resl');
-const {mat4} = require('gl-matrix');
+const { mat4 } = require('gl-matrix');
 
 const Input = require('../utils/input');
 const camera = require('../utils/camera/free-camera');
 const grid = require('../utils/grid/grid');
 
-const quad = require('../utils/geometry/quad');
-const plane = require('../utils/geometry/plane');
 const box = require('../utils/geometry/box');
-const sphere = require('../utils/geometry/sphere');
-const torus = require('../utils/geometry/torus');
 const cylinder = require('../utils/geometry/cylinder');
-const cone = require('../utils/geometry/cone');
+
+function fromEuler (ex, ey, ez) {
+  let halfToRad = 0.5 * Math.PI / 180.0;
+  ex *= halfToRad;
+  ey *= halfToRad;
+  ez *= halfToRad;
+
+  let sx = Math.sin(ex);
+  let cx = Math.cos(ex);
+  let sy = Math.sin(ey);
+  let cy = Math.cos(ey);
+  let sz = Math.sin(ez);
+  let cz = Math.cos(ez);
+
+  let q = [0, 0, 0, 1];
+  q[0] = sx * cy * cz + cx * sy * sz;
+  q[1] = cx * sy * cz - sx * cy * sz;
+  q[2] = cx * cy * sz - sx * sy * cz;
+  q[3] = cx * cy * cz + sx * sy * sz;
+
+  return q;
+}
 
 let vshader = `
   precision mediump float;
@@ -51,12 +68,6 @@ let fshader = `
 
 module.exports = function (regl) {
   let input = new Input(regl);
-  let meshQuad = quad();
-
-  let meshPlane = plane( 1, 1, {
-    widthSegments: 16,
-    lengthSegments: 16
-  });
 
   let meshBox = box(1, 1, 1, {
     widthSegments: 4,
@@ -64,18 +75,7 @@ module.exports = function (regl) {
     lengthSegments: 4
   });
 
-  let meshSphere = sphere(0.5, {
-    segments: 64,
-  });
-
-  let meshTorus = torus();
-
   let meshCylinder = cylinder(0.5, 0.5, 1.0, {
-    radialSegments: 64,
-    heightSegments: 4,
-  });
-
-  let meshCone = cone(0.5, 1.0, {
     radialSegments: 64,
     heightSegments: 4,
   });
@@ -112,11 +112,21 @@ module.exports = function (regl) {
 
   let updateCamera = camera(regl, {
     // free-camera
-    eye: [10, 10, 10, 1],
+    eye: [50, 30, 50, 1],
     phi: -Math.PI / 6,
     theta: Math.PI / 4,
   });
   let drawGrid = grid(regl, 100, 100, 100);
+
+  let matList = new Array(100);
+  for ( let i = 0; i < 100; ++i ) {
+    matList[i] = mat4.fromRotationTranslationScale(
+      [],
+      fromEuler( Math.random() * 360, Math.random() * 360, Math.random() * 360 ),
+      [Math.random() * 100 - 50, Math.random() * 20 - 10, Math.random() * 100 - 50],
+      [Math.random() * 5 + 1, Math.random() * 5 + 1, Math.random() * 5 + 1]
+    );
+  }
 
   resl({
     manifest: {
@@ -144,54 +154,22 @@ module.exports = function (regl) {
 
         //
         updateCamera(input, () => {
-          // quad
-          drawMesh({
-            texture,
-            mesh: meshQuad,
-            model: mat4.translate([], identity, [0, 0, 0] )
-          });
-
-          // plane
-          drawMesh({
-            texture,
-            mesh: meshPlane,
-            model: mat4.translate([], identity, [2, 0, 0] )
-          });
-
           // box
-          drawMesh({
-            texture,
-            mesh: meshBox,
-            model: mat4.translate([], identity, [4, 0, 0] )
-          });
+          for ( let i = 0; i < matList.length/2; ++i ) {
+            drawMesh({
+              texture,
+              mesh: meshBox,
+              model: matList[i]
+            });
+          }
 
-          // sphere
-          drawMesh({
-            texture,
-            mesh: meshSphere,
-            model: mat4.translate([], identity, [6, 0, 0] )
-          });
-
-          // torus
-          drawMesh({
-            texture,
-            mesh: meshTorus,
-            model: mat4.translate([], identity, [8, 0, 0] )
-          });
-
-          // cylinder
-          drawMesh({
-            texture,
-            mesh: meshCylinder,
-            model: mat4.translate([], identity, [10, 0, 0] )
-          });
-
-          // cone
-          drawMesh({
-            texture,
-            mesh: meshCone,
-            model: mat4.translate([], identity, [12, 0, 0] )
-          });
+          for ( let i = matList.length/2; i < matList.length; ++i ) {
+            drawMesh({
+              texture,
+              mesh: meshCylinder,
+              model: matList[i]
+            });
+          }
 
           // grids
           drawGrid();

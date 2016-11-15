@@ -1,6 +1,6 @@
 'use strict';
 
-const vec3 = require('gl-vec3');
+const {vec3} = require('gl-matrix');
 
 module.exports = function ( radiusTop, radiusBottom, height, opts ) {
   opts = opts || {};
