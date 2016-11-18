@@ -2,6 +2,7 @@
 
 const resl = require('resl');
 const { mat4 } = require('gl-matrix');
+const quad = require('glsl-quad');
 
 const Input = require('../utils/input');
 const camera = require('../utils/camera/free-camera');
@@ -32,13 +33,12 @@ function fromEuler (ex, ey, ez) {
   return q;
 }
 
-let vshader = `
+let vs_simple = `
   precision mediump float;
   uniform mat4 model, view, projection;
 
   attribute vec3 position;
   attribute vec2 uv;
-  attribute vec3 barycentric;
 
   varying vec2 v_uv;
 
@@ -48,7 +48,7 @@ let vshader = `
   }
 `;
 
-let fshader = `
+let fs_simple = `
   #extension GL_OES_standard_derivatives : enable
 
   precision mediump float;
@@ -57,12 +57,31 @@ let fshader = `
   varying vec2 v_uv;
 
   void main () {
-    // gl_FragColor = vec4( v_uv.x, v_uv.y, 0, 1 );
     gl_FragColor = texture2D( tex, v_uv );
 
     if (!gl_FrontFacing) {
       gl_FragColor *= 0.05;
     }
+  }
+`;
+
+let vs_pick = `
+  precision mediump float;
+  uniform mat4 model, view, projection;
+
+  attribute vec3 position;
+
+  void main() {
+    gl_Position = projection * view * model * vec4(position, 1);
+  }
+`;
+
+let fs_pick = `
+  precision mediump float;
+  uniform vec4 pick_color;
+
+  void main () {
+    gl_FragColor = pick_color;
   }
 `;
 
@@ -80,17 +99,49 @@ module.exports = function (regl) {
     heightSegments: 4,
   });
 
-  const identity = mat4.identity([]);
+
+  const debugDraw = regl({
+    viewport: {
+      x: 5,
+      y: 5,
+      width: 160,
+      height: 90,
+    },
+
+    blend: {
+      enable: true,
+      func: {
+        srcRGB: 'src alpha',
+        srcAlpha: 1,
+        dstRGB: 'one minus src alpha',
+        dstAlpha: 1
+      },
+    },
+
+    frag: quad.shader.frag,
+    vert: quad.shader.vert,
+    attributes: {
+      a_position: quad.verts,
+      a_uv: quad.uvs
+    },
+    elements: quad.indices,
+    uniforms: {
+      u_tex: regl.prop('texture'),
+      u_clip_y: regl.prop('clip_y')
+    },
+    framebuffer: regl.prop('fbo')
+  });
+
   const drawMesh = regl({
     frontFace: 'cw',
 
-    // cull: {
-    //   enable: true,
-    //   face: 'back'
-    // },
+    cull: {
+      enable: true,
+      face: 'back'
+    },
 
-    vert: vshader,
-    frag: fshader,
+    vert: vs_simple,
+    frag: fs_simple,
 
     attributes: {
       position: regl.prop('mesh.positions'),
@@ -103,11 +154,30 @@ module.exports = function (regl) {
       model: regl.prop('model'),
       tex: regl.prop('texture')
     },
+  });
 
-    // count ( {time}, props ) {
-    //   let total = props.mesh.indices.length;
-    //   return Math.ceil(time % 10.0 / 10.0 * total);
-    // }
+  const drawMeshPick = regl({
+    frontFace: 'cw',
+
+    cull: {
+      enable: true,
+      face: 'back'
+    },
+
+    vert: vs_pick,
+    frag: fs_pick,
+
+    attributes: {
+      position: regl.prop('mesh.positions'),
+    },
+
+    elements: regl.prop('mesh.indices'),
+
+    uniforms: {
+      model: regl.prop('model'),
+      tex: regl.prop('texture'),
+      pick_color: regl.prop('pick_color'),
+    },
   });
 
   let updateCamera = camera(regl, {
@@ -118,21 +188,11 @@ module.exports = function (regl) {
   });
   let drawGrid = grid(regl, 100, 100, 100);
 
-  let matList = new Array(100);
-  for ( let i = 0; i < 100; ++i ) {
-    matList[i] = mat4.fromRotationTranslationScale(
-      [],
-      fromEuler( Math.random() * 360, Math.random() * 360, Math.random() * 360 ),
-      [Math.random() * 100 - 50, Math.random() * 20 - 10, Math.random() * 100 - 50],
-      [Math.random() * 5 + 1, Math.random() * 5 + 1, Math.random() * 5 + 1]
-    );
-  }
-
   resl({
     manifest: {
       texture: {
         type: 'image',
-        src: 'assets-3d/textures/uv/uv_checker_left_top.jpg',
+        src: 'assets-3d/textures/checker/checker_uv_02.jpg',
         parser: (data) => regl.texture({
           data: data,
           mag: 'linear',
@@ -144,8 +204,41 @@ module.exports = function (regl) {
     },
 
     onDone: ({texture}) => {
-      regl.frame(() => {
+      let num = 100;
+      let propList = new Array(num);
+      for ( let i = 0; i < num; ++i ) {
+        let transform = mat4.fromRotationTranslationScale(
+          [],
+          fromEuler( Math.random() * 360, Math.random() * 360, Math.random() * 360 ),
+          [Math.random() * 100 - 50, Math.random() * 20 - 10, Math.random() * 100 - 50],
+          [Math.random() * 5 + 1, Math.random() * 5 + 1, Math.random() * 5 + 1]
+        );
 
+        let prop = {
+          texture,
+          mesh: meshBox,
+          model: transform,
+          pick_color: [
+            ((i >> 16) & 0xff) / 255,
+            ((i >> 8) & 0xff) / 255,
+            (i & 0xff) / 255,
+            1.0
+          ]
+        };
+
+        if ( i >= 50 ) {
+          prop.mesh = meshCylinder;
+        }
+
+        propList[i] = prop;
+      }
+
+      let fbo = regl.framebuffer({
+        width: regl._gl.canvas.width,
+        height: regl._gl.canvas.height
+      });
+
+      regl.frame(() => {
         // clear contents of the drawing buffer
         regl.clear({
           color: [0.3, 0.3, 0.3, 1],
@@ -154,26 +247,31 @@ module.exports = function (regl) {
 
         //
         updateCamera(input, () => {
-          // box
-          for ( let i = 0; i < matList.length/2; ++i ) {
-            drawMesh({
-              texture,
-              mesh: meshBox,
-              model: matList[i]
-            });
-          }
+          // ============================
+          // render color-id to fbo
+          // ============================
 
-          for ( let i = matList.length/2; i < matList.length; ++i ) {
-            drawMesh({
-              texture,
-              mesh: meshCylinder,
-              model: matList[i]
+          regl({ framebuffer: fbo })(() => {
+            regl.clear({
+              color: [0.0, 0.0, 0.0, 0.5],
+              depth: 1
             });
-          }
+
+            drawMeshPick(propList);
+          });
+
+          // ============================
+          // real scene
+          // ============================
+
+          drawMesh(propList);
 
           // grids
           drawGrid();
+
         });
+
+        debugDraw({texture: fbo.color[0], clip_y: 1});
 
         //
         input.reset();

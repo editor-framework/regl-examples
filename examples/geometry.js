@@ -21,7 +21,6 @@ let vshader = `
 
   attribute vec3 position;
   attribute vec2 uv;
-  attribute vec3 barycentric;
 
   varying vec2 v_uv;
 

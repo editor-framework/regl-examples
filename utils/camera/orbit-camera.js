@@ -32,10 +32,10 @@ module.exports = function (regl, props) {
     return Math.min(Math.max(x, lo), hi);
   }
 
-  function _handleInput (input, dt) {
+  function _handleInput (input) {
     if ( input.keypress('mouse-left') ) {
-      let dx = input.mouseDeltaX * dt * 0.2;
-      let dy = input.mouseDeltaY * dt * 0.2;
+      let dx = input.mouseDeltaX * 0.002;
+      let dy = input.mouseDeltaY * 0.002;
       let w = Math.max(cameraState.distance, 2.0);
 
       cameraState.theta += w * dx;
@@ -120,7 +120,7 @@ module.exports = function (regl, props) {
     last = now;
 
     // update camera
-    _handleInput(input, dt);
+    _handleInput(input);
     _tick(dt);
 
     //

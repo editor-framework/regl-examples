@@ -37,28 +37,30 @@ module.exports = function (regl, props) {
     ];
   }
 
-  function _handleInput (input, dt) {
+  function _handleInput (input) {
     df = 0, dr = 0;
     panX = 0, panY = 0, panZ = 0;
 
     if ( input.keypress('mouse-left') && input.keypress('mouse-right') ) {
-      let dx = input.mouseDeltaX * dt * 10.0;
-      let dy = input.mouseDeltaY * dt * 10.0;
+      let dx = input.mouseDeltaX;
+      let dy = input.mouseDeltaY;
 
       panX = dx;
       panY = -dy;
+
     } else if ( input.keypress('mouse-left') ) {
-      let dx = input.mouseDeltaX * dt * 0.2;
-      let dy = input.mouseDeltaY * dt * 10.0;
+      let dx = input.mouseDeltaX;
+      let dy = input.mouseDeltaY;
 
-      cameraState.theta -= dx;
+      cameraState.theta -= dx * 0.002;
       panZ = -dy;
-    } else if ( input.keypress('mouse-right') ) {
-      let dx = input.mouseDeltaX * dt * 0.2;
-      let dy = input.mouseDeltaY * dt * 0.2;
 
-      cameraState.theta -= dx;
-      cameraState.phi -= dy;
+    } else if ( input.keypress('mouse-right') ) {
+      let dx = input.mouseDeltaX;
+      let dy = input.mouseDeltaY;
+
+      cameraState.theta -= dx * 0.002;
+      cameraState.phi -= dy * 0.002;
     }
 
     if ( input.keypress('w') ) {
@@ -173,8 +175,10 @@ module.exports = function (regl, props) {
     }
     last = now;
 
+    // handle input
+    _handleInput(input);
+
     // update camera
-    _handleInput(input, dt);
     _tick(dt);
 
     //
