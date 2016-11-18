@@ -11,6 +11,10 @@ const grid = require('../utils/grid/grid');
 const box = require('../utils/geometry/box');
 const cylinder = require('../utils/geometry/cylinder');
 
+function _clamp (x, lo, hi) {
+  return Math.min(Math.max(x, lo), hi);
+}
+
 function fromEuler (ex, ey, ez) {
   let halfToRad = 0.5 * Math.PI / 180.0;
   ex *= halfToRad;
@@ -53,6 +57,7 @@ let fs_simple = `
 
   precision mediump float;
   uniform sampler2D tex;
+  uniform vec4 color;
 
   varying vec2 v_uv;
 
@@ -62,6 +67,8 @@ let fs_simple = `
     if (!gl_FrontFacing) {
       gl_FragColor *= 0.05;
     }
+
+    gl_FragColor *= color;
   }
 `;
 
@@ -152,7 +159,47 @@ module.exports = function (regl) {
 
     uniforms: {
       model: regl.prop('model'),
-      tex: regl.prop('texture')
+      tex: regl.prop('texture'),
+      color: regl.prop('color')
+    },
+  });
+
+  const drawMeshHover = regl({
+    frontFace: 'cw',
+
+    blend: {
+      enable: true,
+      func: {
+        srcRGB: 'src alpha',
+        srcAlpha: 1,
+        dstRGB: 'one minus src alpha',
+        dstAlpha: 1
+      },
+    },
+
+    cull: {
+      enable: true,
+      face: 'back'
+    },
+
+    depth: {
+      enable: false
+    },
+
+    vert: vs_simple,
+    frag: fs_simple,
+
+    attributes: {
+      position: regl.prop('mesh.positions'),
+      uv: regl.prop('mesh.uvs'),
+    },
+
+    elements: regl.prop('mesh.indices'),
+
+    uniforms: {
+      model: regl.prop('model'),
+      tex: regl.prop('texture'),
+      color: regl.prop('color')
     },
   });
 
@@ -218,6 +265,7 @@ module.exports = function (regl) {
           texture,
           mesh: meshBox,
           model: transform,
+          color: [1, 1, 1, 1],
           pick_color: [
             ((i >> 16) & 0xff) / 255,
             ((i >> 8) & 0xff) / 255,
@@ -237,8 +285,9 @@ module.exports = function (regl) {
         width: regl._gl.canvas.width,
         height: regl._gl.canvas.height
       });
-
       regl.frame(() => {
+        let pickID = -1;
+
         // clear contents of the drawing buffer
         regl.clear({
           color: [0.3, 0.3, 0.3, 1],
@@ -258,6 +307,23 @@ module.exports = function (regl) {
             });
 
             drawMeshPick(propList);
+
+            let x = _clamp(input.mouseX, 0.001, regl._gl.canvas.width-0.001);
+            let y = _clamp(input.mouseY, 0.001, regl._gl.canvas.height-0.001);
+
+            let pixel = regl.read({
+              x: x,
+              y: regl._gl.canvas.height - y,
+              width: 1,
+              height: 1,
+            });
+
+            if ( pixel[3] !== 128 ) {
+              let r = pixel[0];
+              let g = pixel[1];
+              let b = pixel[2];
+              pickID = r << 16 | g << 8 | b;
+            }
           });
 
           // ============================
@@ -265,6 +331,21 @@ module.exports = function (regl) {
           // ============================
 
           drawMesh(propList);
+
+          if ( pickID !== -1 ) {
+            let prop = {
+              texture,
+              mesh: propList[pickID].mesh,
+              model: propList[pickID].model,
+              // model: mat4.multiply(
+              //   [],
+              //   propList[pickID].model,
+              //   mat4.fromScaling([], [1.1, 1.1, 1.1])
+              // ),
+              color: [1, 0, 0, 0.2],
+            };
+            drawMeshHover(prop);
+          }
 
           // grids
           drawGrid();
