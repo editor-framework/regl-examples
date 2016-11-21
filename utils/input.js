@@ -101,14 +101,14 @@ class Input {
 
       document.addEventListener('mousemove', this._mousemoveHandle);
       document.addEventListener('mouseup', this._mouseupHandle);
-      document.addEventListener('mousewheel', this._mousewheelHandle);
+      document.addEventListener('mousewheel', this._mousewheelHandle, {passive: true});
 
       // NOTE: this is possible when multiple button press down
       document.addEventListener('mousedown', this._mousedownHandle);
     });
 
     canvasEL.addEventListener('mousemove', this._mousemoveHandle);
-    canvasEL.addEventListener('mousewheel', this._mousewheelHandle);
+    canvasEL.addEventListener('mousewheel', this._mousewheelHandle, {passive: true});
 
     canvasEL.addEventListener('mouseenter', event => {
       event.stopPropagation();

@@ -185,5 +185,7 @@ module.exports = function (regl, props) {
     injectContext(block);
   }
 
+  updateCamera.state = cameraState;
+
   return updateCamera;
 };

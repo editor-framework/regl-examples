@@ -29,8 +29,8 @@ function fromEuler (ex, ey, ez) {
   let cz = Math.cos(ez);
 
   let q = [0, 0, 0, 1];
-  q[0] = sx * cy * cz + cx * sy * sz;
-  q[1] = cx * sy * cz - sx * cy * sz;
+  q[0] = sx * cy * cz - cx * sy * sz;
+  q[1] = cx * sy * cz + sx * cy * sz;
   q[2] = cx * cy * sz - sx * sy * cz;
   q[3] = cx * cy * cz + sx * sy * sz;
 
