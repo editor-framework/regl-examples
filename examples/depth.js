@@ -9,11 +9,6 @@ const camera = require('../utils/camera/free-camera');
 const grid = require('../utils/grid/grid');
 
 const box = require('../utils/geometry/box');
-const cylinder = require('../utils/geometry/cylinder');
-
-function _clamp (x, lo, hi) {
-  return Math.min(Math.max(x, lo), hi);
-}
 
 function fromEuler (ex, ey, ez) {
   let halfToRad = 0.5 * Math.PI / 180.0;
@@ -63,16 +58,11 @@ let fs_simple = `
 
   void main () {
     gl_FragColor = texture2D( tex, v_uv );
-
-    if (!gl_FrontFacing) {
-      gl_FragColor *= 0.05;
-    }
-
     gl_FragColor *= color;
   }
 `;
 
-let vs_pick = `
+let vs_depth = `
   precision mediump float;
   uniform mat4 model, view, projection;
 
@@ -83,12 +73,23 @@ let vs_pick = `
   }
 `;
 
-let fs_pick = `
+let fs_depth = `
   precision mediump float;
-  uniform vec4 pick_color;
+
+  // const vec3 PackFactors = vec3( 256. * 256. * 256., 256. * 256.,  256. );
+  // const float ShiftRight8 = 1. / 256.;
+  // const float PackUpscale = 256. / 255.; // fraction -> 0..1 (including 1)
+
+  // vec4 packDepthToRGBA( const in float v ) {
+  //   vec4 r = vec4( fract( v * PackFactors ), v );
+  //   r.yzw -= r.xyz * ShiftRight8; // tidy overflow
+  //   return r * PackUpscale;
+  // }
 
   void main () {
-    gl_FragColor = pick_color;
+    gl_FragColor = vec4(1,1,1,1);
+    // gl_FragColor = vec4(vec3(gl_FragCoord.z), 1.0);
+		// gl_FragColor = packDepthToRGBA( gl_FragCoord.z );
   }
 `;
 
@@ -100,12 +101,6 @@ module.exports = function (regl) {
     heightSegments: 4,
     lengthSegments: 4
   });
-
-  let meshCylinder = cylinder(0.5, 0.5, 1.0, {
-    radialSegments: 64,
-    heightSegments: 4,
-  });
-
 
   const debugDraw = regl({
     depth: {
@@ -129,8 +124,40 @@ module.exports = function (regl) {
       },
     },
 
-    frag: quad.shader.frag,
-    vert: quad.shader.vert,
+    vert: `
+      precision mediump float;
+      attribute vec2 a_position;
+      attribute vec2 a_uv;
+
+      uniform float u_clip_y;
+
+      varying vec2 v_uv;
+
+      void main() {
+        v_uv = a_uv;
+        gl_Position = vec4(a_position * vec2(1,u_clip_y), 0, 1);
+      }
+    `,
+
+    frag: `
+      precision mediump float;
+      varying vec2 v_uv;
+
+      uniform sampler2D u_tex;
+      uniform float u_cam_near;
+      uniform float u_cam_far;
+
+      void main () {
+        float z = texture2D(u_tex,v_uv).x;
+        float viewZ = ( u_cam_near * u_cam_far ) / ( ( u_cam_far - u_cam_near ) * z - u_cam_far );
+
+        z = ( viewZ + u_cam_near ) / ( u_cam_near - u_cam_far );
+
+        gl_FragColor.rgb = vec3(z);
+        gl_FragColor.a = 1.0;
+      }
+    `,
+
     attributes: {
       a_position: quad.verts,
       a_uv: quad.uvs
@@ -138,9 +165,10 @@ module.exports = function (regl) {
     elements: quad.indices,
     uniforms: {
       u_tex: regl.prop('texture'),
-      u_clip_y: regl.prop('clip_y')
+      u_clip_y: regl.prop('clip_y'),
+      u_cam_near: regl.prop('near'),
+      u_cam_far: regl.prop('far'),
     },
-    framebuffer: regl.prop('fbo')
   });
 
   const drawMesh = regl({
@@ -168,18 +196,8 @@ module.exports = function (regl) {
     },
   });
 
-  const drawMeshHover = regl({
+  const drawMeshZ = regl({
     frontFace: 'cw',
-
-    blend: {
-      enable: true,
-      func: {
-        srcRGB: 'src alpha',
-        srcAlpha: 1,
-        dstRGB: 'one minus src alpha',
-        dstAlpha: 1
-      },
-    },
 
     cull: {
       enable: true,
@@ -187,11 +205,11 @@ module.exports = function (regl) {
     },
 
     depth: {
-      enable: false
+      enable: true,
     },
 
-    vert: vs_simple,
-    frag: fs_simple,
+    vert: vs_depth,
+    frag: fs_depth,
 
     attributes: {
       position: regl.prop('mesh.positions'),
@@ -203,31 +221,6 @@ module.exports = function (regl) {
     uniforms: {
       model: regl.prop('model'),
       tex: regl.prop('texture'),
-      color: regl.prop('color')
-    },
-  });
-
-  const drawMeshPick = regl({
-    frontFace: 'cw',
-
-    cull: {
-      enable: true,
-      face: 'back'
-    },
-
-    vert: vs_pick,
-    frag: fs_pick,
-
-    attributes: {
-      position: regl.prop('mesh.positions'),
-    },
-
-    elements: regl.prop('mesh.indices'),
-
-    uniforms: {
-      model: regl.prop('model'),
-      tex: regl.prop('texture'),
-      pick_color: regl.prop('pick_color'),
     },
   });
 
@@ -270,32 +263,23 @@ module.exports = function (regl) {
           mesh: meshBox,
           model: transform,
           color: [1, 1, 1, 1],
-          pick_color: [
-            ((i >> 16) & 0xff) / 255,
-            ((i >> 8) & 0xff) / 255,
-            (i & 0xff) / 255,
-            1.0
-          ]
         };
-
-        if ( i >= 50 ) {
-          prop.mesh = meshCylinder;
-        }
 
         propList[i] = prop;
       }
 
       let fbo = regl.framebuffer({
         width: regl._gl.canvas.width,
-        height: regl._gl.canvas.height
+        height: regl._gl.canvas.height,
+        depth: true,
+        stencil: false,
+        depthTexture: true,
       });
       regl.frame(() => {
-        let pickID = -1;
-
         // clear contents of the drawing buffer
         regl.clear({
           color: [0.3, 0.3, 0.3, 1],
-          depth: 1
+          depth: 1,
         });
 
         //
@@ -310,24 +294,7 @@ module.exports = function (regl) {
               depth: 1
             });
 
-            drawMeshPick(propList);
-
-            let x = _clamp(input.mouseX, 0.001, regl._gl.canvas.width-0.001);
-            let y = _clamp(input.mouseY, 0.001, regl._gl.canvas.height-0.001);
-
-            let pixel = regl.read({
-              x: x,
-              y: regl._gl.canvas.height - y,
-              width: 1,
-              height: 1,
-            });
-
-            if ( pixel[3] !== 128 ) {
-              let r = pixel[0];
-              let g = pixel[1];
-              let b = pixel[2];
-              pickID = r << 16 | g << 8 | b;
-            }
+            drawMeshZ(propList);
           });
 
           // ============================
@@ -336,27 +303,16 @@ module.exports = function (regl) {
 
           drawMesh(propList);
 
-          if ( pickID !== -1 ) {
-            let prop = {
-              texture,
-              mesh: propList[pickID].mesh,
-              model: propList[pickID].model,
-              // model: mat4.multiply(
-              //   [],
-              //   propList[pickID].model,
-              //   mat4.fromScaling([], [1.1, 1.1, 1.1])
-              // ),
-              color: [1, 0, 0, 0.2],
-            };
-            drawMeshHover(prop);
-          }
-
           // grids
           drawGrid();
-
         });
 
-        debugDraw({texture: fbo.color[0], clip_y: 1});
+        debugDraw({
+          texture: fbo.depth,
+          clip_y: 1,
+          near: 1,
+          far: 1000,
+        });
 
         //
         input.reset();

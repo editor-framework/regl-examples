@@ -9,6 +9,8 @@ module.exports = function (regl, props) {
     theta: props.theta || 0,
     phi: props.phi || 0,
     eye: props.eye || [0, 0, 0, 1],
+    near: props.near || 0.01,
+    far: props.far || 1000.0,
   };
 
   let df = 0;
@@ -148,8 +150,8 @@ module.exports = function (regl, props) {
           cameraState.projection,
           Math.PI / 4.0,
           viewportWidth / viewportHeight,
-          0.01,
-          10000.0
+          cameraState.near,
+          cameraState.far
         );
       }
     },
