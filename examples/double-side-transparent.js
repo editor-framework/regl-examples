@@ -10,28 +10,6 @@ const coord = require('../utils/coord');
 
 const box = require('../utils/geometry/box');
 
-function fromEuler (ex, ey, ez) {
-  let halfToRad = 0.5 * Math.PI / 180.0;
-  ex *= halfToRad;
-  ey *= halfToRad;
-  ez *= halfToRad;
-
-  let sx = Math.sin(ex);
-  let cx = Math.cos(ex);
-  let sy = Math.sin(ey);
-  let cy = Math.cos(ey);
-  let sz = Math.sin(ez);
-  let cz = Math.cos(ez);
-
-  let q = [0, 0, 0, 1];
-  q[0] = sx * cy * cz - cx * sy * sz;
-  q[1] = cx * sy * cz + sx * cy * sz;
-  q[2] = cx * cy * sz - sx * sy * cz;
-  q[3] = cx * cy * cz + sx * sy * sz;
-
-  return q;
-}
-
 let vs_simple = `
   precision mediump float;
   uniform mat4 model, view, projection;
@@ -75,6 +53,34 @@ module.exports = function (regl) {
     lengthSegments: 4
   });
 
+  const drawMeshSolid = regl({
+    frontFace: 'cw',
+
+    cull: {
+      enable: true,
+      face: 'back',
+    },
+
+    depth: {
+      enable: true,
+    },
+
+    vert: vs_simple,
+    frag: fs_simple,
+
+    attributes: {
+      position: regl.prop('mesh.positions'),
+      uv: regl.prop('mesh.uvs'),
+    },
+
+    elements: regl.prop('mesh.indices'),
+
+    uniforms: {
+      model: regl.prop('model'),
+      tex: regl.prop('texture'),
+      color: regl.prop('color')
+    },
+  });
 
   const drawMesh = regl({
     frontFace: 'cw',
@@ -120,7 +126,7 @@ module.exports = function (regl) {
 
   let updateCamera = camera(regl, {
     // free-camera
-    eye: [50, 30, 50, 1],
+    eye: [10, 10, 10, 1],
     phi: -Math.PI / 6,
     theta: Math.PI / 4,
   });
@@ -144,34 +150,6 @@ module.exports = function (regl) {
     },
 
     onDone: ({texture}) => {
-      let num = 100;
-      let propList = new Array(num);
-      // let propList2 = new Array(2*num);
-      for ( let i = 0; i < num; ++i ) {
-        let transform = mat4.fromRotationTranslationScale(
-          [],
-          fromEuler( Math.random() * 360, Math.random() * 360, Math.random() * 360 ),
-          [Math.random() * 100 - 50, Math.random() * 20 - 10, Math.random() * 100 - 50],
-          [Math.random() * 5 + 1, Math.random() * 5 + 1, Math.random() * 5 + 1]
-        );
-
-        let prop = {
-          texture,
-          mesh: meshBox,
-          model: transform,
-          color: [1, 1, 1, Math.random()],
-          cull: 'back'
-        };
-
-        propList[i] = prop;
-      }
-
-      // DEBUG
-      // let propList = [
-      //   { texture, mesh: meshBox, model: mat4.fromTranslation([], [ 10, 1, 10, 1 ]), color: [1, 1, 1, 1] },
-      //   { texture, mesh: meshBox, model: mat4.fromTranslation([], [ 11, 1, 11, 1 ]), color: [1, 1, 1, 1] },
-      // ];
-
       regl.frame(() => {
         // clear contents of the drawing buffer
         regl.clear({
@@ -181,43 +159,40 @@ module.exports = function (regl) {
 
         //
         updateCamera(input, () => {
-          let view = updateCamera.state.view;
-          let invView = mat4.invert([],view);
-
-          let camPos = mat4.getTranslation([], invView);
-          let camFwd = [-view[2], -view[6], -view[10]];
-
-          let meshPos = [0, 0, 0, 1];
-          for ( let i = 0; i < propList.length; ++i ) {
-            let prop = propList[i];
-            mat4.getTranslation(meshPos, prop.model);
-
-            let tempx = meshPos[0] - camPos[0];
-            let tempy = meshPos[1] - camPos[1];
-            let tempz = meshPos[2] - camPos[2];
-            prop.zdist = tempx*camFwd[0] + tempy*camFwd[1] + tempz*camFwd[2];
-          }
-
-          propList.sort((a, b) => {
-            return b.zdist - a.zdist; // back to front
-          });
-
           // grids
           drawGrid();
 
           // coord
           drawCoord();
 
-          // // two sided
-          // for ( let i = 0; i < propList.length; ++i ) {
-          //   let prop = Object.assign({}, propList[i]);
-          //   prop.cull = 'front';
-          //   propList2[2*i] = prop;
-          //   propList2[2*i+1] = propList[i];
-          // }
-
           // real scene
-          drawMesh(propList);
+          drawMeshSolid({
+            texture,
+            mesh: meshBox,
+            model: mat4.fromRotationTranslationScale(
+              [],
+              [0, 0, 0, 1],
+              [0, 2, 0, 1],
+              [0.5, 0.5, 0.5]
+            ),
+            color: [0.3, 0, 0, 1],
+          });
+
+          drawMesh({
+            texture,
+            mesh: meshBox,
+            model: mat4.fromTranslation([], [0, 2, 0, 1] ),
+            color: [1, 1, 1, 0.3],
+            cull: 'front'
+          });
+
+          drawMesh({
+            texture,
+            mesh: meshBox,
+            model: mat4.fromTranslation([], [0, 2, 0, 1] ),
+            color: [1, 1, 1, 0.3],
+            cull: 'back'
+          });
         });
 
         //
