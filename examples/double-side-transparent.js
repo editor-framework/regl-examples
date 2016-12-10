@@ -134,70 +134,73 @@ module.exports = function (regl) {
   let drawGrid = grid(regl, 100, 100, 100);
   let drawCoord = coord(regl, mat4.fromTranslation([], [0, 0.01, 0]));
 
+  let meshTexture = regl.texture(null);
+
   resl({
     manifest: {
       texture: {
         type: 'image',
         src: 'assets-3d/textures/checker/checker_uv_02.jpg',
-        parser: (data) => regl.texture({
-          data: data,
-          mag: 'linear',
-          min: 'mipmap',
-          mipmap: 'nice',
-          // flipY: true
-        })
       }
     },
 
-    onDone: ({texture}) => {
-      regl.frame(() => {
-        // clear contents of the drawing buffer
-        regl.clear({
-          color: [0.3, 0.3, 0.3, 1],
-          depth: 1
-        });
-
-        //
-        updateCamera(input, () => {
-          // grids
-          drawGrid();
-
-          // coord
-          drawCoord();
-
-          // real scene
-          drawMeshSolid({
-            texture,
-            mesh: meshBox,
-            model: mat4.fromRotationTranslationScale(
-              [],
-              [0, 0, 0, 1],
-              [0, 2, 0, 1],
-              [0.5, 0.5, 0.5]
-            ),
-            color: [0.3, 0, 0, 1],
-          });
-
-          drawMesh({
-            texture,
-            mesh: meshBox,
-            model: mat4.fromTranslation([], [0, 2, 0, 1] ),
-            color: [1, 1, 1, 0.3],
-            cull: 'front'
-          });
-
-          drawMesh({
-            texture,
-            mesh: meshBox,
-            model: mat4.fromTranslation([], [0, 2, 0, 1] ),
-            color: [1, 1, 1, 0.3],
-            cull: 'back'
-          });
-        });
-
-        //
-        input.reset();
+    onDone: (assets) => {
+      meshTexture({
+        data: assets.texture,
+        mag: 'linear',
+        min: 'mipmap',
+        mipmap: 'nice',
+        // flipY: true
       });
-    },
+    }
+  });
+
+  regl.frame(() => {
+    // clear contents of the drawing buffer
+    regl.clear({
+      color: [0.3, 0.3, 0.3, 1],
+      depth: 1
+    });
+
+    //
+    updateCamera(input, () => {
+      // grids
+      drawGrid();
+
+      // coord
+      drawCoord();
+
+      // real scene
+      drawMeshSolid({
+        texture: meshTexture,
+        mesh: meshBox,
+        model: mat4.fromRotationTranslationScale(
+          [],
+          [0, 0, 0, 1],
+          [0, 2, 0, 1],
+          [0.5, 0.5, 0.5]
+        ),
+        color: [0.3, 0, 0, 1],
+      });
+
+      drawMesh({
+        texture: meshTexture,
+        mesh: meshBox,
+        model: mat4.fromTranslation([], [0, 2, 0, 1] ),
+        color: [1, 1, 1, 0.3],
+        cull: 'front'
+      });
+
+      drawMesh({
+        texture: meshTexture,
+        mesh: meshBox,
+        model: mat4.fromTranslation([], [0, 2, 0, 1] ),
+        color: [1, 1, 1, 0.3],
+        cull: 'back'
+      });
+    });
+
+    //
+    input.reset();
   });
 };

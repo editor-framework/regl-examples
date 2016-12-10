@@ -6,7 +6,7 @@ const {mat4} = require('gl-matrix');
 const Input = require('../utils/input');
 const camera = require('../utils/camera/free-camera');
 const grid = require('../utils/grid/grid');
-const wireframe = require('../utils/geometry/wireframe');
+const geomUtils = require('../utils/geometry/utils');
 
 const sphere = require('../utils/geometry/sphere');
 // const torus = require('../utils/geometry/torus');
@@ -185,7 +185,7 @@ module.exports = function (regl) {
     centers[3*i + 2] = [0, 0, 1];
   }
   mesh.barycentrics = centers;
-  let wireframeIndices = wireframe(mesh.indices);
+  let wireframeIndices = geomUtils.wireframe(mesh.indices);
 
   const drawMeshBC = regl({
     frontFace: 'cw',
@@ -254,11 +254,6 @@ module.exports = function (regl) {
 
   const drawMeshSolid = regl({
     frontFace: 'cw',
-
-    cull: {
-      enable: regl.prop('cull'),
-      face: regl.prop('cullFace'),
-    },
 
     vert: vshader,
     frag: fshader,
@@ -367,14 +362,14 @@ module.exports = function (regl) {
           // grids
           drawGrid();
 
-          //
+          // darw solid mesh + barycentrics wireframe
           drawMeshBC({
             texture,
             mesh: mesh,
             model: mat4.translate([], identity, [0, 0, 0])
           });
 
-          //
+          // darw barycentrics wireframe
           drawMeshBCTransparent({
             cullFace: 'front',
             texture,
@@ -388,10 +383,8 @@ module.exports = function (regl) {
             model: mat4.translate([], identity, [5, 0, 0])
           });
 
-          //
+          // darw solid mesh + wireframe lines
           drawMeshSolid({
-            cull: false,
-            cullFace: 'back',
             offsetFactor: 1,
             offsetUnits: 1,
             texture,
@@ -410,7 +403,7 @@ module.exports = function (regl) {
             color: [0,0,0,1],
           });
 
-          //
+          // darw wireframe lines
           drawMeshWireframe({
             texture,
             mesh: {
@@ -424,8 +417,6 @@ module.exports = function (regl) {
           drawMeshSolid({
             offsetFactor: 1,
             offsetUnits: 1,
-            cull: true,
-            cullFace: 'back',
             texture,
             mesh: mesh,
             model: mat4.translate([], identity, [5, 0, 5]),

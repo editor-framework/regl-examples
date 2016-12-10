@@ -231,92 +231,95 @@ module.exports = function (regl) {
     theta: Math.PI / 4,
   });
   let drawGrid = grid(regl, 100, 100, 100);
+  let meshTexture = regl.texture(null);
 
   resl({
     manifest: {
       texture: {
         type: 'image',
         src: 'assets-3d/textures/checker/checker_uv_02.jpg',
-        parser: (data) => regl.texture({
-          data: data,
-          mag: 'linear',
-          min: 'mipmap',
-          mipmap: 'nice',
-          // flipY: true
-        })
       }
     },
 
-    onDone: ({texture}) => {
-      let num = 100;
-      let propList = new Array(num);
-      for ( let i = 0; i < num; ++i ) {
-        let transform = mat4.fromRotationTranslationScale(
-          [],
-          fromEuler( Math.random() * 360, Math.random() * 360, Math.random() * 360 ),
-          [Math.random() * 100 - 50, Math.random() * 20 - 10, Math.random() * 100 - 50],
-          [Math.random() * 5 + 1, Math.random() * 5 + 1, Math.random() * 5 + 1]
-        );
-
-        let prop = {
-          texture,
-          mesh: meshBox,
-          model: transform,
-          color: [1, 1, 1, 1],
-        };
-
-        propList[i] = prop;
-      }
-
-      let fbo = regl.framebuffer({
-        width: regl._gl.canvas.width,
-        height: regl._gl.canvas.height,
-        depth: true,
-        stencil: false,
-        depthTexture: true,
+    onDone: (assets) => {
+      meshTexture({
+        data: assets.texture,
+        mag: 'linear',
+        min: 'mipmap',
+        mipmap: 'nice',
+        // flipY: true
       });
-      regl.frame(() => {
-        // clear contents of the drawing buffer
+    }
+  });
+
+  let num = 100;
+  let propList = new Array(num);
+  for ( let i = 0; i < num; ++i ) {
+    let transform = mat4.fromRotationTranslationScale(
+      [],
+      fromEuler( Math.random() * 360, Math.random() * 360, Math.random() * 360 ),
+      [Math.random() * 100 - 50, Math.random() * 20 - 10, Math.random() * 100 - 50],
+      [Math.random() * 5 + 1, Math.random() * 5 + 1, Math.random() * 5 + 1]
+    );
+
+    let prop = {
+      texture: meshTexture,
+      mesh: meshBox,
+      model: transform,
+      color: [1, 1, 1, 1],
+    };
+
+    propList[i] = prop;
+  }
+
+  let fbo = regl.framebuffer({
+    width: regl._gl.canvas.width,
+    height: regl._gl.canvas.height,
+    depth: true,
+    stencil: false,
+    depthTexture: true,
+  });
+
+  regl.frame(() => {
+    // clear contents of the drawing buffer
+    regl.clear({
+      color: [0.3, 0.3, 0.3, 1],
+      depth: 1,
+    });
+
+    //
+    updateCamera(input, () => {
+      // ============================
+      // render color-id to fbo
+      // ============================
+
+      regl({ framebuffer: fbo })(() => {
         regl.clear({
-          color: [0.3, 0.3, 0.3, 1],
-          depth: 1,
+          color: [0.0, 0.0, 0.0, 0.5],
+          depth: 1
         });
 
-        //
-        updateCamera(input, () => {
-          // ============================
-          // render color-id to fbo
-          // ============================
-
-          regl({ framebuffer: fbo })(() => {
-            regl.clear({
-              color: [0.0, 0.0, 0.0, 0.5],
-              depth: 1
-            });
-
-            drawMeshZ(propList);
-          });
-
-          // ============================
-          // real scene
-          // ============================
-
-          drawMesh(propList);
-
-          // grids
-          drawGrid();
-        });
-
-        debugDraw({
-          texture: fbo.depth,
-          clip_y: 1,
-          near: 1,
-          far: 1000,
-        });
-
-        //
-        input.reset();
+        drawMeshZ(propList);
       });
-    },
+
+      // ============================
+      // real scene
+      // ============================
+
+      drawMesh(propList);
+
+      // grids
+      drawGrid();
+    });
+
+    debugDraw({
+      texture: fbo.depth,
+      clip_y: 1,
+      near: 1,
+      far: 1000,
+    });
+
+    //
+    input.reset();
   });
 };
