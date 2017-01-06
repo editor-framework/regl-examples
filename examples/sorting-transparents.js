@@ -126,7 +126,7 @@ module.exports = function (regl) {
   });
 
   let drawGrid = grid(regl, 100, 100, 100);
-  let drawCoord = coord(regl, mat4.fromTranslation([], [0, 0.01, 0]));
+  let drawCoord = coord(regl);
 
   resl({
     manifest: {
@@ -206,7 +206,7 @@ module.exports = function (regl) {
           drawGrid();
 
           // coord
-          drawCoord();
+          drawCoord(mat4.fromTranslation([], [0, 0.01, 0]));
 
           // // two sided
           // for ( let i = 0; i < propList.length; ++i ) {

@@ -9,6 +9,7 @@ const grid = require('../utils/grid/grid');
 const coord = require('../utils/coord');
 
 const box = require('../utils/geometry/box');
+const plane = require('../utils/geometry/plane');
 
 let vs_simple = `
   precision mediump float;
@@ -51,6 +52,11 @@ module.exports = function (regl) {
     widthSegments: 4,
     heightSegments: 4,
     lengthSegments: 4
+  });
+
+  let meshFloor = plane(20, 20, {
+    widthSegments: 20,
+    lengthSegments: 20
   });
 
   const drawMeshSolid = regl({
@@ -132,21 +138,35 @@ module.exports = function (regl) {
   });
 
   let drawGrid = grid(regl, 100, 100, 100);
-  let drawCoord = coord(regl, mat4.fromTranslation([], [0, 0.01, 0]));
+  let drawCoord = coord(regl);
 
   let meshTexture = regl.texture(null);
+  let floorTexture = regl.texture(null);
 
   resl({
     manifest: {
       texture: {
         type: 'image',
         src: 'assets-3d/textures/checker/checker_uv_02.jpg',
-      }
+      },
+
+      texture02: {
+        type: 'image',
+        src: 'assets-3d/textures/floor.png',
+      },
     },
 
     onDone: (assets) => {
       meshTexture({
         data: assets.texture,
+        mag: 'linear',
+        min: 'mipmap',
+        mipmap: 'nice',
+        // flipY: true
+      });
+
+      floorTexture({
+        data: assets.texture02,
         mag: 'linear',
         min: 'mipmap',
         mipmap: 'nice',
@@ -168,7 +188,19 @@ module.exports = function (regl) {
       drawGrid();
 
       // coord
-      drawCoord();
+      drawCoord(mat4.fromTranslation([], [0, 0.01, 0]));
+
+      drawMeshSolid({
+        texture: floorTexture,
+        mesh: meshFloor,
+        model: mat4.fromRotationTranslationScale(
+          [],
+          [0, 0, 0, 1],
+          [0, 0.1, 0, 1],
+          [1.0, 1.0, 1.0]
+        ),
+        color: [1, 1, 1, 1],
+      });
 
       // real scene
       drawMeshSolid({

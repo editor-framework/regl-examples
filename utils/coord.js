@@ -1,8 +1,11 @@
 'use strict';
 
+const {mat4} = require('gl-matrix');
+
 module.exports = drawCoord;
 
-function drawCoord (regl, transform) {
+function drawCoord (regl) {
+  let identity = mat4.identity([]);
   let drawLine = regl({
     vert: `
       precision mediump float;
@@ -33,18 +36,19 @@ function drawCoord (regl, transform) {
     },
 
     uniforms: {
-      model: transform,
+      model: regl.prop('transform'),
       color: regl.prop('color')
     },
 
     count: 2,
   });
 
-  return function () {
+  return function (transform) {
+    transform = transform || identity;
     drawLine([
-      { line: [ [0, 0, 0], [1, 0, 0] ], color: [1, 0, 0] },
-      { line: [ [0, 0, 0], [0, 1, 0] ], color: [0, 1, 0] },
-      { line: [ [0, 0, 0], [0, 0, 1] ], color: [0, 0, 1] },
+      { line: [ [0, 0, 0], [1, 0, 0] ], color: [1, 0, 0], transform: transform },
+      { line: [ [0, 0, 0], [0, 1, 0] ], color: [0, 1, 0], transform: transform },
+      { line: [ [0, 0, 0], [0, 0, 1] ], color: [0, 0, 1], transform: transform },
     ]);
   };
 }
