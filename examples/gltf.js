@@ -253,7 +253,7 @@ module.exports = function (regl) {
 
     // draw options
     let opts = {
-      frontFace: 'ccw',
+      frontFace: 'cw',
 
       vert: tech.program.vertexShader,
       frag: tech.program.fragmentShader,
@@ -309,12 +309,7 @@ module.exports = function (regl) {
     // TODO:
     // let gltfSampler = gltf.sampler[gltfTexture.sampler];
 
-    textures[name] = regl.texture({
-      mag: 'linear',
-      min: 'mipmap',
-      mipmap: 'nice',
-      flipY: true
-    });
+    textures[name] = regl.texture();
     manifest[name] = {
       type: 'image',
       src: 'examples/gltf-exports/' + gltfImage.uri
@@ -325,7 +320,11 @@ module.exports = function (regl) {
     onDone: (assets) => {
       for ( let name in assets ) {
         textures[name]({
-          data: assets[name]
+          data: assets[name],
+          mag: 'linear',
+          min: 'mipmap',
+          mipmap: 'nice',
+          flipY: true
         });
       }
     }
