@@ -140,31 +140,6 @@ function _binaryIndexOf ( array, key ) {
   return lo;
 }
 
-function _duplicateJoint ( node ) {
-  let newNode = {
-    id: node.id,
-    name: node.name,
-    jointName: node.jointName,
-    parent: node.parent,
-    children: [],
-
-    position: node.position.slice(0),
-    rotation: node.rotation.slice(0),
-    scale: node.scale.slice(0),
-
-    local: node.local,
-    world: node.world,
-  };
-
-  for (let i = 0; i < node.children.length; i++) {
-    let newChildNode = _duplicateJoint(node.children[i]);
-    newNode.children.push(newChildNode);
-    newChildNode.parent = newNode;
-  }
-
-  return newNode;
-}
-
 function _walk ( node, fn ) {
   node.children.forEach(child => {
     fn ( node, child );
@@ -172,7 +147,7 @@ function _walk ( node, fn ) {
   });
 }
 
-function _recurseNode ( node, childrenIDs, joints ) {
+function _recurseNode ( node, childrenIDs ) {
   childrenIDs.forEach(nodeID => {
     let gltfNode = gltf.nodes[nodeID];
 
@@ -198,16 +173,10 @@ function _recurseNode ( node, childrenIDs, joints ) {
       extras: gltfNode.extras,
     };
 
-    if ( gltfNode.skeletons ) {
-      gltfNode.skeletons.forEach(id => {
-        _recurseJoint( joints, null, id );
-      });
-    }
-
     node.children.push(childNode);
 
     if ( gltfNode.children ) {
-      _recurseNode ( childNode, gltfNode.children, joints );
+      _recurseNode ( childNode, gltfNode.children );
     }
   });
 }
@@ -265,6 +234,44 @@ function _findJointByName ( node, name ) {
   }
 
   return null;
+}
+
+function _duplicateJoint ( node ) {
+  let newNode = {
+    id: node.id,
+    name: node.name,
+    jointName: node.jointName,
+    parent: node.parent,
+    children: [],
+
+    position: node.position.slice(0),
+    rotation: node.rotation.slice(0),
+    scale: node.scale.slice(0),
+
+    local: node.local,
+    world: node.world,
+  };
+
+  for (let i = 0; i < node.children.length; i++) {
+    let newChildNode = _duplicateJoint(node.children[i]);
+    newNode.children.push(newChildNode);
+    newChildNode.parent = newNode;
+  }
+
+  return newNode;
+}
+
+function _getRootJoint ( node ) {
+  let result = node;
+
+  while (1) {
+    let parent = result.parent;
+    if ( !parent ) {
+      return result;
+    }
+
+    result = parent;
+  }
 }
 
 // function _type2buffertype ( regl, type ) {
@@ -395,40 +402,16 @@ function _primitive2drawinfo (regl, gltfPrimitive, techniques, textures, bufferV
   return info;
 }
 
-function _updateBonesTexture(animNode, snapshot) {
+function _updateBonesTexture(animNode, joints) {
   let bonesTexture = animNode.bonesTexture;
   let size = bonesTexture.width;
   let result = new Array(size * size * 4);
 
   for ( let i = 0; i < animNode.bones.length; ++i ) {
-    let jointID = animNode.bones[i];
-    let joint = animNode.joints[jointID];
-    let TSR = snapshot[jointID];
-    if ( TSR ) {
-      mat4.fromRotationTranslationScale(
-        joint.local2,
-        TSR.r || joint.rotation,
-        TSR.t || joint.position,
-        TSR.s || joint.scale
-      );
-    }
-  }
-
-  for ( let i = 0; i < animNode.skeletons.length; ++i ) {
-    let jointID = animNode.skeletons[i];
-    let root = animNode.joints[jointID];
-
-    root.world = root.local2;
-    _walk(root, (parent, child) => {
-      child.world = mat4.multiply([], parent.world, child.local2);
-    });
-  }
-
-  for ( let i = 0; i < animNode.bones.length; ++i ) {
     let bindpose = animNode.bindposes[i];
 
     let jointID = animNode.bones[i];
-    let joint = animNode.joints[jointID];
+    let joint = joints[jointID];
     let mat = mat4.multiply([], joint.world, bindpose);
 
     result[16*i + 0 ] = mat[0 ];
@@ -695,6 +678,10 @@ module.exports = function (regl) {
     // draw options
     let opts = {
       // frontFace: 'ccw',
+      cull: {
+        enable: true,
+        face: 'back'
+      },
 
       vert: tech.program.vertexShader,
       frag: tech.program.fragmentShader,
@@ -725,7 +712,7 @@ module.exports = function (regl) {
   // nodes
   // =================
 
-  _recurseNode(scene, gltfScene.nodes, joints);
+  _recurseNode(scene, gltfScene.nodes);
   _walk(scene, (parent, child) => {
     child.local = mat4.fromRotationTranslationScale(
       [],
@@ -736,6 +723,17 @@ module.exports = function (regl) {
     child.world = mat4.multiply([], parent.world, child.local);
   });
 
+  // =================
+  // joints
+  // =================
+
+  for ( let id in gltf.nodes ) {
+    let node = gltf.nodes[id];
+    if ( node.jointName ) {
+      _recurseJoint( joints, null, id );
+    }
+  }
+
   for ( let id in joints ) {
     let joint = joints[id];
 
@@ -744,6 +742,12 @@ module.exports = function (regl) {
       continue;
     }
 
+    joint.local = mat4.fromRotationTranslationScale(
+      [],
+      joint.rotation,
+      joint.position,
+      joint.scale
+    );
     joint.world = mat4.fromRotationTranslationScale(
       [],
       joint.rotation,
@@ -862,28 +866,48 @@ module.exports = function (regl) {
       // =================
 
       _walk(scene, (parent, child) => {
+        if ( child.extras && child.extras.root ) {
+          let cloneJoints = {};
+          let root = joints[child.extras.root];
+          let cloneRoot = _duplicateJoint(root);
+          cloneRoot.local = mat4.identity([]);
+          cloneRoot.local2 = mat4.clone(cloneRoot.local);
+          cloneJoints[cloneRoot.id] = cloneRoot;
+
+          _walk(cloneRoot, (parent, child) => {
+            child.local2 = mat4.clone(child.local);
+            cloneJoints[child.id] = child;
+          });
+          child.joints = cloneJoints;
+        }
+
         if ( child.skin && child.skeletons ) {
           // already did it
           if ( child.bonesTexture ) {
             return;
           }
 
-          let cloneJoints = {};
-          for ( let i = 0; i < child.skeletons.length; ++i ) {
-            let jointID = child.skeletons[i];
-            let root = joints[jointID];
-            let cloneRoot = _duplicateJoint(root);
+          if ( child.parent && child.parent.extras && child.parent.extras.root ) {
+            child.joints = child.parent.joints;
+          } else {
+            let cloneJoints = {};
+            for ( let i = 0; i < child.skeletons.length; ++i ) {
+              let jointID = child.skeletons[i];
+              let root = joints[jointID];
+              root = _getRootJoint(root);
 
-            cloneRoot.local = mat4.identity([]);
-            cloneRoot.local2 = mat4.clone(cloneRoot.local);
-            cloneJoints[cloneRoot.id] = cloneRoot;
+              let cloneRoot = _duplicateJoint(root);
+              cloneRoot.local = mat4.identity([]);
+              cloneRoot.local2 = mat4.clone(cloneRoot.local);
+              cloneJoints[cloneRoot.id] = cloneRoot;
 
-            _walk(cloneRoot, (parent, child) => {
-              child.local2 = mat4.clone(child.local);
-              cloneJoints[child.id] = child;
-            });
+              _walk(cloneRoot, (parent, child) => {
+                child.local2 = mat4.clone(child.local);
+                cloneJoints[child.id] = child;
+              });
+            }
+            child.joints = cloneJoints;
           }
-          child.joints = cloneJoints;
 
           let gltfSkin = gltf.skins[child.skin];
           let accessor = gltf.accessors[gltfSkin.inverseBindMatrices];
@@ -894,15 +918,23 @@ module.exports = function (regl) {
           let data = new Float32Array(bufferView, accessor.byteOffset, accessor.count * 16);
 
           gltfSkin.jointNames.forEach(name => {
+            let found = false;
+
             for ( let i = 0; i < child.skeletons.length; ++i ) {
               let jointID = child.skeletons[i];
               let root = child.joints[jointID];
+              root = _getRootJoint(root);
 
               let result = _findJointByName(root, name);
               if ( result ) {
                 bones.push(result.id);
+                found = true;
                 break;
               }
+            }
+
+            if ( !found ) {
+              console.error(`Can not find joint: ${name}`);
             }
           });
           child.bones = bones;
@@ -1117,25 +1149,41 @@ module.exports = function (regl) {
                   r = quat.slerp([], a, b, ratio);
                 }
 
-                snapshot[bone.id] = { t, s, r };
+                let joint = child.joints[bone.id];
+                mat4.fromRotationTranslationScale(
+                  joint.local2,
+                  r || joint.rotation,
+                  t || joint.position,
+                  s || joint.scale
+                );
               });
             }
 
+            // update joints' world transform
+            let root = child.joints[child.extras.root];
+            if ( root.parent ) {
+              root.world = mat4.multiply([], root.parent.world, root.local2);
+            } else {
+              root.world = root.local2;
+            }
+            _walk(root, (parent, child) => {
+              child.world = mat4.multiply([], parent.world, child.local2);
+            });
+
+            // update child bones
             for ( let i = 0; i < child.children.length; ++i ) {
               let animNode = child.children[i];
               if ( animNode.bonesTexture ) {
-                _updateBonesTexture(animNode, snapshot);
+                _updateBonesTexture(animNode, child.joints);
               }
             }
-
-            // TODO
-            // console.log(anim);
           }
 
           //
           if ( child.meshes ) {
             // draw
             let bonesTexture = child.bonesTexture;
+            // let bonesTexture = null;
 
             child.meshes.forEach(id => {
               let gltfMesh = gltf.meshes[id];
