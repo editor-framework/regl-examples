@@ -871,11 +871,9 @@ module.exports = function (regl) {
           let root = joints[child.extras.root];
           let cloneRoot = _duplicateJoint(root);
           cloneRoot.local = mat4.identity([]);
-          cloneRoot.local2 = mat4.clone(cloneRoot.local);
           cloneJoints[cloneRoot.id] = cloneRoot;
 
           _walk(cloneRoot, (parent, child) => {
-            child.local2 = mat4.clone(child.local);
             cloneJoints[child.id] = child;
           });
           child.joints = cloneJoints;
@@ -898,11 +896,9 @@ module.exports = function (regl) {
 
               let cloneRoot = _duplicateJoint(root);
               cloneRoot.local = mat4.identity([]);
-              cloneRoot.local2 = mat4.clone(cloneRoot.local);
               cloneJoints[cloneRoot.id] = cloneRoot;
 
               _walk(cloneRoot, (parent, child) => {
-                child.local2 = mat4.clone(child.local);
                 cloneJoints[child.id] = child;
               });
             }
@@ -1026,7 +1022,7 @@ module.exports = function (regl) {
 
             keyframes = {
               times: data,
-              bones: [],
+              bones: {},
             };
             anim.keyframes[gltfAnimSampler.input] = keyframes;
 
@@ -1037,19 +1033,12 @@ module.exports = function (regl) {
           }
 
           //
-          let bone;
-          for ( let i = 0; i < keyframes.bones.length; ++i ) {
-            let b = keyframes.bones[i];
-            if ( b.id === gltfTarget.id ) {
-              bone = b;
-              break;
-            }
-          }
+          let bone = keyframes.bones[gltfTarget.id];
           if ( !bone ) {
             bone = {
               id: gltfTarget.id,
             };
-            keyframes.bones.push(bone);
+            keyframes.bones[gltfTarget.id] = bone;
           }
 
           let prop = gltfTarget.path;
@@ -1118,56 +1107,80 @@ module.exports = function (regl) {
           if ( child.extras && child.extras.animations ) {
             let id = child.extras.animations[0];
             let anim = animations[id];
-            let snapshot = {};
 
             let t = time % anim.length;
-            for ( let p in anim.keyframes ) {
-              let keyframes = anim.keyframes[p];
-              let idx = _binaryIndexOf(keyframes.times, t);
 
-              let loIdx = Math.max(idx-1, 0);
-              let hiIdx = Math.min(idx, keyframes.times.length);
-              let ratio = (t - keyframes.times[loIdx]) / (keyframes.times[hiIdx] - keyframes.times[loIdx]);
+            let keyframes0 = anim.keyframes.time0;
+            let keyframes = anim.keyframes.time;
 
-              // console.log(`current time ${t}, idx = ${idx} lo = ${keyframes.times[loIdx]}, hi = ${keyframes.times[hiIdx]}`);
-              keyframes.bones.forEach(bone => {
-                let t, s, r;
+            let idx = _binaryIndexOf(keyframes.times, t);
 
-                if ( bone.translation ) {
-                  let a = bone.translation[loIdx];
-                  let b = bone.translation[hiIdx];
-                  t = vec3.lerp([], a, b, ratio);
-                }
-                if ( bone.scale ) {
-                  let a = bone.scale[loIdx];
-                  let b = bone.scale[hiIdx];
-                  s = vec3.lerp([], a, b, ratio);
-                }
-                if ( bone.rotation ) {
-                  let a = bone.rotation[loIdx];
-                  let b = bone.rotation[hiIdx];
-                  r = quat.slerp([], a, b, ratio);
-                }
+            let loIdx = Math.max(idx-1, 0);
+            let hiIdx = Math.min(idx, keyframes.times.length);
+            let ratio = (t - keyframes.times[loIdx]) / (keyframes.times[hiIdx] - keyframes.times[loIdx]);
 
-                let joint = child.joints[bone.id];
-                mat4.fromRotationTranslationScale(
-                  joint.local2,
-                  r || joint.rotation,
-                  t || joint.position,
-                  s || joint.scale
-                );
-              });
+            // console.log(`current time ${t}, idx = ${idx} lo = ${keyframes.times[loIdx]}, hi = ${keyframes.times[hiIdx]}`);
+            for ( let id in keyframes.bones ) {
+              let bone = keyframes.bones[id];
+              let joint = child.joints[bone.id];
+
+              if ( bone.translation ) {
+                let a = bone.translation[loIdx];
+                let b = bone.translation[hiIdx];
+                joint.position = vec3.lerp([], a, b, ratio);
+              }
+
+              if ( bone.scale ) {
+                let a = bone.scale[loIdx];
+                let b = bone.scale[hiIdx];
+                joint.scale = vec3.lerp([], a, b, ratio);
+              }
+
+              if ( bone.rotation ) {
+                let a = bone.rotation[loIdx];
+                let b = bone.rotation[hiIdx];
+                joint.rotation = quat.slerp([], a, b, ratio);
+              }
+            }
+
+            for ( let id in keyframes0.bones ) {
+              let bone0 = keyframes0.bones[id];
+              let joint = child.joints[bone0.id];
+
+              if ( bone0.translation ) {
+                joint.position = bone0.translation[0];
+              }
+
+              if ( bone0.scale ) {
+                joint.scale = bone0.scale[0];
+              }
+
+              if ( bone0.rotation ) {
+                joint.rotation = bone0.rotation[0];
+              }
             }
 
             // update joints' world transform
             let root = child.joints[child.extras.root];
+            mat4.fromRotationTranslationScale(
+              root.local,
+              root.rotation,
+              root.position,
+              root.scale
+            );
             if ( root.parent ) {
-              root.world = mat4.multiply([], root.parent.world, root.local2);
+              root.world = mat4.multiply([], root.parent.world, root.local);
             } else {
-              root.world = root.local2;
+              root.world = root.local;
             }
             _walk(root, (parent, child) => {
-              child.world = mat4.multiply([], parent.world, child.local2);
+              mat4.fromRotationTranslationScale(
+                child.local,
+                child.rotation,
+                child.position,
+                child.scale
+              );
+              child.world = mat4.multiply([], parent.world, child.local);
             });
 
             // update child bones
